@@ -342,3 +342,44 @@ repo_root=C:\Users\dell\Desktop\HackerRank\OctoberEdition\hackerrank-orchestrate
 worktree=main
 parent_agent=none
 
+## [2026-10-24T16:29:42Z] Phase 3 engineering brief: inspection and clarification questions
+
+User Prompt (verbatim, secrets redacted):
+[Pasted brief: "Phase 3: Evidence Extraction - Complete Engineering Implementation & Verification" requiring repository/dataset inspection, baseline tests, design plan, clarifying questions before coding, then implementation, testing, and PHASE_3_EVIDENCE_EXTRACTION_REPORT.md; no commit/push without authorization.]
+
+Agent Response Summary:
+Inspected without changing code. Found Phase 3 already implemented and committed by the user in 0ce6b61 (clean tree, synced with origin); baseline 196 tests pass; extraction re-run gives 94 files (83 parsed, 11 screenshots pending), 2903 observations, 4.1s, 28 MB peak, deterministic. The dataset files named in the brief do not exist in this repo. Listed gaps against the brief and asked four grouped questions (vision API and credentials, screenshot ground truth, retrieval index and JSONL export, duplicate policy).
+
+Actions:
+* git status/log/fetch; pytest code/tests; timed extraction run with memory measurement and a rerun determinism check
+* Appended this entry to log.txt
+
+Context:
+tool=Claude Code
+model=claude-opus-5-5
+branch=main
+repo_root=C:\Users\dell\Desktop\HackerRank\OctoberEdition\hackerrank-orchestrate-october26
+worktree=main
+parent_agent=none
+
+## [2026-10-24T16:51:12Z] Phase 3 completion: manual screenshots, ground truth, index, export, duplicates, report
+
+User Prompt (verbatim, secrets redacted):
+[Pasted decisions: Q1 option B (manually transcribe the 11 PNGs into the existing cache format, no paid API or credentials, keep provenance, label manual vs automated); Q2 hand-checked test-only ground truth with accuracy and mismatches reported; Q3 dependency-free lookup index and deterministic JSONL export with documented schema; Q4 keep cross-file duplicates, add duplicate accounting and within-file detection; add Unicode, duplicate-row, instruction-like text, isolation, unresolved identity, provenance, round-trip and determinism tests; run baseline and full suites; write code/docs/PHASE_3_EVIDENCE_EXTRACTION_REPORT.md; no Phase 4, no commit/push.]
+
+Agent Response Summary:
+Hand-checked ground truth for all 11 screenshots, then separately transcribed them into the cache (method manual, image SHA-256) and labelled them MANUAL_TRANSCRIPTION; 94/94 files now parse (2934 observations) and 165/165 key facts match the ground truth. Added duplicate accounting (0 within-file, 0 same-instant cross-file, 230 repeated-state groups), an EvidenceIndex with no cross-person leakage plus catalog-link conflict detection (marketing_001 only), and a byte-deterministic JSONL export. Fixed four defects found on the way (substring state matching, dropped seconds, false future-date warnings, injected text able to flip connector state). 241 tests pass versus the 196 baseline; nothing committed.
+
+Actions:
+* New: code/audit/evidence/{duplicates,index,export}.py; code/tools/{store_manual_transcriptions,screenshot_accuracy,export_evidence}.py; code/llm/manual_transcriptions/screenshots_v1.json; 11 code/llm/cache/screenshots/*.json; code/tests/fixtures/screenshot_ground_truth.json; 3 test files; code/docs/{evidence_jsonl_schema,PHASE_3_EVIDENCE_EXTRACTION_REPORT}.md
+* Modified: code/audit/evidence/{model,screenshots,extract}.py, code/llm/{vision,cache}.py, prompt, tools/evidence_report.py, docs/data_assumptions.md, requirements.txt, .gitignore, baselines
+* Viewed all 11 PNGs; ran pytest subsets and full suite, mutation checks, accuracy tool, cache check, export, timing runs
+
+Context:
+tool=Claude Code
+model=claude-opus-5-5
+branch=main
+repo_root=C:\Users\dell\Desktop\HackerRank\OctoberEdition\hackerrank-orchestrate-october26
+worktree=main
+parent_agent=none
+

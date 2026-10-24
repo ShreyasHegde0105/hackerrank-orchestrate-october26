@@ -1,8 +1,15 @@
-"""Screenshot transcription with a vision model, cached on disk.
+"""Screenshot transcription, cached on disk.
 
-The model only transcribes what is on screen into a fixed JSON schema
-(structured outputs). Interpreting the transcription (identifiers, states,
-categories) is deterministic code in audit/evidence/screenshots.py.
+A transcription copies what is on screen into a fixed JSON schema. Two
+sources write the same cache format:
+  * manual    - a person (here: the coding agent viewing the PNG) transcribed
+                it by hand; stored under the pseudo-model MANUAL_MODEL with
+                method "manual" (see tools/store_manual_transcriptions.py);
+  * model     - a vision model call with structured outputs (optional; needs
+                the anthropic package and credentials).
+The default pipeline reads manual transcriptions only and never calls an API.
+Interpreting a transcription (identifiers, states, categories) is
+deterministic code in audit/evidence/screenshots.py.
 """
 from __future__ import annotations
 
@@ -17,6 +24,7 @@ PROMPT_PATH = Path(__file__).parent / "prompts" / "screenshot_extraction.md"
 PROMPT_VERSION = "screenshot-v1"
 DEFAULT_MODEL = "claude-opus-5-5"
 MODEL_ENV = "DELETION_AUDIT_VISION_MODEL"
+MANUAL_MODEL = "manual-transcription"  # cache "model" for hand-made transcriptions
 
 _PAIR = {
     "type": "object",
@@ -86,28 +94,45 @@ class ScreenshotTranscriber:
         self.usage = usage if usage is not None else UsageLedger()
         self.model = model or os.environ.get(MODEL_ENV, DEFAULT_MODEL)
         self.prompt = PROMPT_PATH.read_text(encoding="utf-8")
-        self.allow_api = allow_api
+        self.allow_api = allow_api and self.model != MANUAL_MODEL
         self._client = client
+
+    @classmethod
+    def manual(cls, cache: JsonCache | None = None, usage: UsageLedger | None = None):
+        """The default for the pipeline: hand transcriptions only, no API calls."""
+        return cls(cache=cache, usage=usage, model=MANUAL_MODEL, allow_api=False)
 
     def key(self, image: bytes) -> str:
         return cache_key(PROMPT_VERSION, self.model, self.prompt, image)
 
     def transcribe(self, image: bytes, subject: str = "") -> dict:
+        return self.transcribe_with_meta(image, subject)[0]
+
+    def transcribe_with_meta(self, image: bytes, subject: str = "") -> tuple[dict, dict]:
+        """(transcription, meta). meta["method"] is "manual" or "model", so callers
+        can label the evidence by how it was produced."""
         key = self.key(image)
         cached = self.cache.get(key)
         if cached is not None:
+            method = cached.get("method", "model")
             self.usage.add(UsageRecord("screenshot_extraction", cached.get("model", self.model),
-                                       0, 0, cache_hit=True, subject=subject))
-            return validate(cached["result"])
+                                       0, 0, cache_hit=True, subject=subject, method=method))
+            meta = {k: cached.get(k) for k in ("model", "method", "transcriber", "transcribed_at",
+                                               "image_sha256", "prompt_version")}
+            meta["method"] = method
+            return validate(cached["result"]), meta
         if not self.allow_api:
-            raise VisionUnavailable("no cached transcription and API calls are disabled")
+            source = "manual transcription" if self.model == MANUAL_MODEL else "cached transcription"
+            raise VisionUnavailable(f"no {source} for this image and API calls are disabled")
         client = self._client or self._make_client()
         result, usage = self._call(client, image)
         self.usage.add(UsageRecord("screenshot_extraction", self.model, usage["input_tokens"],
-                                   usage["output_tokens"], cache_hit=False, subject=subject))
+                                   usage["output_tokens"], cache_hit=False, subject=subject,
+                                   method="model"))
         self.cache.put(key, {"model": self.model, "prompt_version": PROMPT_VERSION,
-                             "subject": subject, "usage": usage, "result": result})
-        return result
+                             "method": "model", "subject": subject, "usage": usage,
+                             "result": result})
+        return result, {"model": self.model, "method": "model", "prompt_version": PROMPT_VERSION}
 
     def _make_client(self):
         try:

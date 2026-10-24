@@ -1,0 +1,80 @@
+{
+  "image_file": "search_index_inspector_20260901.png",
+  "image_sha256": "75afdb0ae53a4510c83399a70d88073cb4fb2747454095756e4ddad1a8c70605",
+  "method": "manual",
+  "model": "manual-transcription",
+  "prompt_version": "screenshot-v1",
+  "result": {
+    "application": "Search Console",
+    "captured_at_text": "Executed 01 Sep 2026 06:00:14 UTC",
+    "other_identifiers": [],
+    "page_title": "Customer Search",
+    "records": [
+      {
+        "fields": [
+          {
+            "field": "Index",
+            "value": "customer_directory_v3"
+          },
+          {
+            "field": "Score",
+            "value": "9.84"
+          },
+          {
+            "field": "indexed_at",
+            "value": "2026-09-01T05:58:21Z"
+          }
+        ],
+        "identifiers": [
+          {
+            "field": "Display name",
+            "value": "Gabriel Silva"
+          },
+          {
+            "field": "Email",
+            "value": "g.silva76@gmail.com"
+          },
+          {
+            "field": "Customer reference",
+            "value": "user_13"
+          }
+        ],
+        "kind_hint": "search index document",
+        "label": null,
+        "related_references": [],
+        "resource_id": "search_428",
+        "status_text": null
+      },
+      {
+        "fields": [
+          {
+            "field": "Score",
+            "value": "4.12"
+          },
+          {
+            "field": "Last indexed",
+            "value": "05:55:03 UTC"
+          }
+        ],
+        "identifiers": [
+          {
+            "field": "Email",
+            "value": "g.silva76.jr@gmail.com"
+          }
+        ],
+        "kind_hint": "search index document",
+        "label": null,
+        "related_references": [],
+        "resource_id": "search_1874",
+        "status_text": null
+      }
+    ]
+  },
+  "subject": "evidence_09",
+  "transcribed_at": "2026-10-24",
+  "transcriber": "Claude Code (claude-opus-5-5), image viewed directly by the coding agent",
+  "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0
+  }
+}

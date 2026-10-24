@@ -1,0 +1,114 @@
+{
+  "image_file": "customer_export_console_20260618.png",
+  "image_sha256": "18b95c1bd8b8956e40216df935498a9f3c181ea2a69b5cd6d3c0841a816d5557",
+  "method": "manual",
+  "model": "manual-transcription",
+  "prompt_version": "screenshot-v1",
+  "result": {
+    "application": "Customer Download Center",
+    "captured_at_text": null,
+    "other_identifiers": [],
+    "page_title": "Data exports",
+    "records": [
+      {
+        "fields": [
+          {
+            "field": "Created",
+            "value": "20 Jun 14:18 UTC"
+          }
+        ],
+        "identifiers": [
+          {
+            "field": "Owner",
+            "value": "marcus.lee@northstar.shop"
+          }
+        ],
+        "kind_hint": "customer data export",
+        "label": "customer_export_1261.zip",
+        "related_references": [],
+        "resource_id": "export_1261",
+        "status_text": "Collecting"
+      },
+      {
+        "fields": [
+          {
+            "field": "Created",
+            "value": "18 Jun 2026 06:42 UTC"
+          },
+          {
+            "field": "Expires",
+            "value": "25 Jun 2026 06:42 UTC"
+          },
+          {
+            "field": "Size",
+            "value": "18.4 MB"
+          },
+          {
+            "field": "Download count",
+            "value": "0"
+          },
+          {
+            "field": "Included",
+            "value": "Profile · Orders · Saved addresses"
+          }
+        ],
+        "identifiers": [
+          {
+            "field": "Owner",
+            "value": "ingrid.dahl@outlook.com"
+          }
+        ],
+        "kind_hint": "customer data export",
+        "label": "customer_export_1260.zip",
+        "related_references": [],
+        "resource_id": "export_1260",
+        "status_text": "Ready"
+      },
+      {
+        "fields": [
+          {
+            "field": "Created",
+            "value": "17 Jun 11:03 UTC"
+          }
+        ],
+        "identifiers": [
+          {
+            "field": "Owner",
+            "value": "sara.kim@northstar.shop"
+          }
+        ],
+        "kind_hint": "customer data export",
+        "label": "customer_export_1259.zip",
+        "related_references": [],
+        "resource_id": "export_1259",
+        "status_text": "Packaging"
+      },
+      {
+        "fields": [
+          {
+            "field": "Created",
+            "value": "16 Jun 09:27 UTC"
+          }
+        ],
+        "identifiers": [
+          {
+            "field": "Owner",
+            "value": "daniel.park@northstar.shop"
+          }
+        ],
+        "kind_hint": "customer data export",
+        "label": "customer_export_1258.zip",
+        "related_references": [],
+        "resource_id": "export_1258",
+        "status_text": "Ready"
+      }
+    ]
+  },
+  "subject": "evidence_23",
+  "transcribed_at": "2026-10-24",
+  "transcriber": "Claude Code (claude-opus-5-5), image viewed directly by the coding agent",
+  "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0
+  }
+}

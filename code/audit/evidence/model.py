@@ -47,8 +47,9 @@ class TimeBasis(str, Enum):
 
 
 class Confidence(str, Enum):
-    PARSED = "parsed"              # read deterministically from structured content
-    AI_EXTRACTED = "ai_extracted"  # read from a screenshot by a vision model
+    PARSED = "parsed"                                # read deterministically from structured content
+    AI_EXTRACTED = "ai_extracted"                    # read from a screenshot by a vision model
+    MANUAL_TRANSCRIPTION = "manual_transcription"    # a screenshot transcribed by hand
 
 
 @dataclass(frozen=True)

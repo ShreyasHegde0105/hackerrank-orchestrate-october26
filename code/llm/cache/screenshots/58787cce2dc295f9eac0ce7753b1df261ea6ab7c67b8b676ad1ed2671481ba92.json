@@ -1,0 +1,158 @@
+{
+  "image_file": "backup_restore_console_20260429.png",
+  "image_sha256": "2c246aa5843bec609b9ddfdf1154cd81e0fd61996f83954735e9856e48c18bf3",
+  "method": "manual",
+  "model": "manual-transcription",
+  "prompt_version": "screenshot-v1",
+  "result": {
+    "application": "Vault Recovery Manager",
+    "captured_at_text": null,
+    "other_identifiers": [],
+    "page_title": "Customer-platform archives",
+    "records": [
+      {
+        "fields": [
+          {
+            "field": "Region",
+            "value": "ap-southeast-1"
+          },
+          {
+            "field": "Created",
+            "value": "26 Apr 02:00"
+          },
+          {
+            "field": "Size",
+            "value": "102.3 GB"
+          },
+          {
+            "field": "Tier",
+            "value": "Archive"
+          }
+        ],
+        "identifiers": [
+          {
+            "field": "Account",
+            "value": "bluepeakco@outlook.com"
+          }
+        ],
+        "kind_hint": "backup archive",
+        "label": null,
+        "related_references": [],
+        "resource_id": "backup_9291",
+        "status_text": null
+      },
+      {
+        "fields": [
+          {
+            "field": "Region",
+            "value": "us-west-2"
+          },
+          {
+            "field": "Created",
+            "value": "26 Apr 02:00"
+          },
+          {
+            "field": "Size",
+            "value": "67.1 GB"
+          },
+          {
+            "field": "Tier",
+            "value": "Archive"
+          }
+        ],
+        "identifiers": [
+          {
+            "field": "Account",
+            "value": "miller.logistics@company.com"
+          }
+        ],
+        "kind_hint": "backup archive",
+        "label": null,
+        "related_references": [],
+        "resource_id": "backup_9288",
+        "status_text": null
+      },
+      {
+        "fields": [
+          {
+            "field": "Path",
+            "value": "s3://northstar-backups/customer-platform/weekly/segment-42-20260426.tar.zst"
+          },
+          {
+            "field": "Region",
+            "value": "eu-west-1"
+          },
+          {
+            "field": "Created",
+            "value": "26 Apr 2026 02:00 UTC"
+          },
+          {
+            "field": "Encryption",
+            "value": "AES-256"
+          },
+          {
+            "field": "Checksum",
+            "value": "Verified"
+          },
+          {
+            "field": "Last drill",
+            "value": "29 Mar 2026"
+          },
+          {
+            "field": "Retention end",
+            "value": "26 Jul 2026"
+          }
+        ],
+        "identifiers": [
+          {
+            "field": "Account",
+            "value": "areed1433@gmail.com"
+          }
+        ],
+        "kind_hint": "backup archive",
+        "label": null,
+        "related_references": [],
+        "resource_id": "backup_9287",
+        "status_text": null
+      },
+      {
+        "fields": [
+          {
+            "field": "Region",
+            "value": "us-east-1"
+          },
+          {
+            "field": "Created",
+            "value": "26 Apr 02:00"
+          },
+          {
+            "field": "Size",
+            "value": "91.4 GB"
+          },
+          {
+            "field": "Tier",
+            "value": "Archive"
+          }
+        ],
+        "identifiers": [
+          {
+            "field": "Account",
+            "value": "summit-retail@company.com"
+          }
+        ],
+        "kind_hint": "backup archive",
+        "label": null,
+        "related_references": [],
+        "resource_id": "backup_9286",
+        "status_text": null
+      }
+    ]
+  },
+  "subject": "evidence_32",
+  "transcribed_at": "2026-10-24",
+  "transcriber": "Claude Code (claude-opus-5-5), image viewed directly by the coding agent",
+  "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0
+  }
+}

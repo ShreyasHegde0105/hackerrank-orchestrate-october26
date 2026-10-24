@@ -56,6 +56,7 @@ class UsageRecord:
     output_tokens: int
     cache_hit: bool         # True when served from the local cache (no API call)
     subject: str = ""       # e.g. the evidence file id
+    method: str = "model"   # "model" (vision model output) or "manual" (hand transcription)
 
 
 @dataclass

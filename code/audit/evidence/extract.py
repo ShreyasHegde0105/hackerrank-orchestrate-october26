@@ -7,9 +7,11 @@ timestamp problems and system mismatches; they report, they do not repair.
 from __future__ import annotations
 
 from audit.evidence.classify import system_for_resource
+from audit.evidence.duplicates import analyse_duplicates
 from audit.evidence.json_records import extract_json
 from audit.evidence.logs import extract_log
 from audit.evidence.model import (
+    Confidence,
     ExtractionIssue,
     ExtractionResult,
     FileReport,
@@ -74,8 +76,8 @@ def _extract_png(evidence, store, transcriber):
                                     "screenshot not transcribed: no vision transcriber")], \
             FileReport(evidence.file_id, "png", "png/vision", FileStatus.PENDING_AI)
     try:
-        transcription = transcriber.transcribe(store.path(evidence.file_id).read_bytes(),
-                                               subject=evidence.file_id)
+        transcription, meta = transcriber.transcribe_with_meta(
+            store.path(evidence.file_id).read_bytes(), subject=evidence.file_id)
     except VisionUnavailable as exc:
         return [], [ExtractionIssue(evidence.file_id, "$", "info",
                                     f"screenshot not transcribed: {exc}")], \
@@ -83,14 +85,25 @@ def _extract_png(evidence, store, transcriber):
     except VisionError as exc:
         return [], [ExtractionIssue(evidence.file_id, "$", "error", f"vision failed: {exc}")], \
             FileReport(evidence.file_id, "png", "png/vision", FileStatus.FAILED)
-    observations, issues = observations_from_transcription(evidence, transcription)
-    status = FileStatus.PARTIAL if issues else FileStatus.PARSED
-    return observations, issues, FileReport(evidence.file_id, "png", "png/vision", status,
-                                            observations=len(observations),
-                                            units_seen=len(transcription.get("records", [])))
+    manual = meta.get("method") == "manual"
+    confidence = Confidence.MANUAL_TRANSCRIPTION if manual else Confidence.AI_EXTRACTED
+    observations, issues = observations_from_transcription(evidence, transcription, confidence)
+    # date anomalies on screen are warnings about the data, not parse failures
+    status = FileStatus.PARTIAL if any(i.severity == "error" or "not a resource ID" in i.message
+                                       for i in issues) else FileStatus.PARSED
+    return observations, issues, FileReport(
+        evidence.file_id, "png", "png/manual" if manual else "png/vision", status,
+        observations=len(observations), units_seen=len(transcription.get("records", [])),
+        details={"transcription": meta.get("method"), "transcriber": meta.get("transcriber"),
+                 "transcribed_at": meta.get("transcribed_at")})
 
 
 def _cross_checks(result: ExtractionResult) -> None:
+    for group in analyse_duplicates(result.observations).within_file:
+        evidence_id, _, locator = group[0].partition("#")
+        result.issues.append(ExtractionIssue(
+            evidence_id, locator, "warning",
+            f"{len(group)} identical observations in one file (kept): {', '.join(group)}"))
     for obs in result.observations:
         if obs.observed_at > obs.file_captured_at:
             result.issues.append(ExtractionIssue(

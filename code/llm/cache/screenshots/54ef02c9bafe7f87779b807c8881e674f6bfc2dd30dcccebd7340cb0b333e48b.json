@@ -1,0 +1,176 @@
+{
+  "image_file": "security_audit_explorer_20260905.png",
+  "image_sha256": "ca59f693f4e7002466b3fdeaf1bb6763618770963dd811b60003772d07b4b03b",
+  "method": "manual",
+  "model": "manual-transcription",
+  "prompt_version": "screenshot-v1",
+  "result": {
+    "application": "Sentinel",
+    "captured_at_text": null,
+    "other_identifiers": [],
+    "page_title": "Account events",
+    "records": [
+      {
+        "fields": [
+          {
+            "field": "Event",
+            "value": "Account closure recorded"
+          },
+          {
+            "field": "Category",
+            "value": "Account lifecycle"
+          },
+          {
+            "field": "Actor",
+            "value": "automated account workflow"
+          },
+          {
+            "field": "recorded_at",
+            "value": "2026-08-25T04:03:00Z"
+          },
+          {
+            "field": "Signature",
+            "value": "Valid"
+          },
+          {
+            "field": "Journal",
+            "value": "2026-Q3"
+          }
+        ],
+        "identifiers": [
+          {
+            "field": "Subject",
+            "value": "user_03"
+          }
+        ],
+        "kind_hint": "security audit event",
+        "label": null,
+        "related_references": [],
+        "resource_id": "audit_record_003",
+        "status_text": "Valid"
+      },
+      {
+        "fields": [
+          {
+            "field": "Event",
+            "value": "Session revoked"
+          },
+          {
+            "field": "Time",
+            "value": "25 Aug 03:21"
+          }
+        ],
+        "identifiers": [
+          {
+            "field": "Subject",
+            "value": "user_03"
+          }
+        ],
+        "kind_hint": "security audit event",
+        "label": null,
+        "related_references": [],
+        "resource_id": "audit_record_002",
+        "status_text": "Valid"
+      },
+      {
+        "fields": [
+          {
+            "field": "Event",
+            "value": "Recovery challenge completed"
+          },
+          {
+            "field": "Time",
+            "value": "24 Aug 16:14"
+          }
+        ],
+        "identifiers": [
+          {
+            "field": "Subject",
+            "value": "user_03"
+          }
+        ],
+        "kind_hint": "security audit event",
+        "label": null,
+        "related_references": [],
+        "resource_id": "audit_record_001",
+        "status_text": "Valid"
+      },
+      {
+        "fields": [
+          {
+            "field": "Event",
+            "value": "Email change confirmed"
+          },
+          {
+            "field": "Time",
+            "value": "22 Aug 11:27"
+          }
+        ],
+        "identifiers": [
+          {
+            "field": "Subject",
+            "value": "user_03"
+          }
+        ],
+        "kind_hint": "security audit event",
+        "label": null,
+        "related_references": [],
+        "resource_id": "audit_record_006",
+        "status_text": "Valid"
+      },
+      {
+        "fields": [
+          {
+            "field": "Event",
+            "value": "Login from new device"
+          },
+          {
+            "field": "Time",
+            "value": "20 Aug 09:42"
+          }
+        ],
+        "identifiers": [
+          {
+            "field": "Subject",
+            "value": "user_03"
+          }
+        ],
+        "kind_hint": "security audit event",
+        "label": null,
+        "related_references": [],
+        "resource_id": "audit_record_005",
+        "status_text": "Valid"
+      },
+      {
+        "fields": [
+          {
+            "field": "Event",
+            "value": "Password changed"
+          },
+          {
+            "field": "Time",
+            "value": "18 Aug 14:05"
+          }
+        ],
+        "identifiers": [
+          {
+            "field": "Subject",
+            "value": "user_03"
+          }
+        ],
+        "kind_hint": "security audit event",
+        "label": null,
+        "related_references": [],
+        "resource_id": "audit_record_004",
+        "status_text": "Valid"
+      }
+    ]
+  },
+  "subject": "evidence_37",
+  "transcribed_at": "2026-10-24",
+  "transcriber": "Claude Code (claude-opus-5-5), image viewed directly by the coding agent",
+  "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0
+  }
+}

@@ -1,0 +1,130 @@
+{
+  "_about": "TEST-ONLY ground truth for the 11 evidence screenshots. Hand-checked by viewing each PNG directly, in a pass separate from (and before) the manual transcription in code/llm/manual_transcriptions/. Never read by the extraction pipeline. Values are copied as shown on screen. 'records' lists only key facts: each record is identified by its on-screen resource ID, or by its label when no ID is shown.",
+  "files": {
+    "evidence_04": {
+      "image": "account_admin_console_20260926.png",
+      "screen_time": null,
+      "records": [
+        {"key": "account_5762", "identifiers": ["user_11", "haruka.s1838@zoho.com", "+81 90 7610 2507"],
+         "person_name_shown": true, "condition": "PRESENT", "related": ["support_9538"]}
+      ],
+      "notes": "Header shows 'user_11 · account_5762'. Support panel shows 'CS-8538 · support_9538'. Last contact '24 Sep 2026 09:14 JST'."
+    },
+    "evidence_09": {
+      "image": "search_index_inspector_20260901.png",
+      "screen_time": "2026-09-01T06:00:14Z",
+      "records": [
+        {"key": "search_428", "identifiers": ["g.silva76@gmail.com", "user_13"],
+         "person_name_shown": true, "condition": "PRESENT", "related": []},
+        {"key": "search_1874", "identifiers": ["g.silva76.jr@gmail.com"],
+         "person_name_shown": false, "condition": "PRESENT", "related": []}
+      ],
+      "notes": "Query 'email:g.silva76@gmail.com', executed 01 Sep 2026 06:00:14 UTC, 14 s after the manifest capture (06:00:00). search_1874 is a near-miss email (decoy)."
+    },
+    "evidence_14": {
+      "image": "connector_management_console_20260807.png",
+      "screen_time": "2026-08-07T08:00:00Z",
+      "records": [
+        {"key": "data_flow_1121", "identifiers": ["jain.aditi@gmail.com"],
+         "person_name_shown": false, "condition": "ACTIVE", "related": []},
+        {"key": "data_flow_9846", "identifiers": ["lucia-torres@gmail.com"],
+         "person_name_shown": false, "condition": "ACTIVE", "related": []}
+      ],
+      "notes": "Both connectors: destination customer_analytics_warehouse, mode Continuous. data_flow_1121 panel: Status Healthy, Sync mode Continuous sync, last response 200 OK. Two more connectors (Order notifications, Delivery tracking) have no customer identifier."
+    },
+    "evidence_19": {
+      "image": "analytics_profile_view_20260713.png",
+      "screen_time": null,
+      "records": [
+        {"key": "analytics_7438", "identifiers": ["user_20", "darwish.omar@icloud.com"],
+         "person_name_shown": true, "condition": "PRESENT", "related": []}
+      ],
+      "notes": "Name Omar Darwish. 'Last activity 13 Jul 2026 14:22 UTC' is later than the manifest capture (13 Jul 10:00 UTC)."
+    },
+    "evidence_23": {
+      "image": "customer_export_console_20260618.png",
+      "screen_time": null,
+      "records": [
+        {"key": "export_1261", "identifiers": ["marcus.lee@northstar.shop"], "person_name_shown": false,
+         "condition": "PRESENT", "related": [], "status": "Collecting"},
+        {"key": "export_1260", "identifiers": ["ingrid.dahl@outlook.com"], "person_name_shown": false,
+         "condition": "PRESENT", "related": [], "status": "Ready"},
+        {"key": "export_1259", "identifiers": ["sara.kim@northstar.shop"], "person_name_shown": false,
+         "condition": "PRESENT", "related": [], "status": "Packaging"},
+        {"key": "export_1258", "identifiers": ["daniel.park@northstar.shop"], "person_name_shown": false,
+         "condition": "PRESENT", "related": [], "status": "Ready"}
+      ],
+      "notes": "export_1260 panel: created 18 Jun 2026 06:42 UTC, expires 25 Jun 2026 06:42 UTC, included Profile · Orders · Saved addresses. export_1261 row shows 'Created 20 Jun 14:18 UTC', after the manifest capture (18 Jun 12:00)."
+    },
+    "evidence_28": {
+      "image": "support_ticket_console_20260524.png",
+      "screen_time": null,
+      "records": [
+        {"key": "support_1034", "identifiers": ["kagyeman8947@fastmail.com"],
+         "person_name_shown": true, "condition": "PRESENT", "related": []}
+      ],
+      "notes": "Ticket CS-5034 'Where is my delivery?', customer Kofi Agyeman, agent Maya Chen, order ORD-20265034. Messages at 09:12-09:35 on a screenshot captured 24 May 07:00 (times without dates)."
+    },
+    "evidence_32": {
+      "image": "backup_restore_console_20260429.png",
+      "screen_time": null,
+      "records": [
+        {"key": "backup_9291", "identifiers": ["bluepeakco@outlook.com"], "person_name_shown": false,
+         "condition": "PRESENT", "related": []},
+        {"key": "backup_9288", "identifiers": ["miller.logistics@company.com"], "person_name_shown": false,
+         "condition": "PRESENT", "related": []},
+        {"key": "backup_9287", "identifiers": ["areed1433@gmail.com"], "person_name_shown": false,
+         "condition": "PRESENT", "related": [], "retention_end": "26 Jul 2026"},
+        {"key": "backup_9286", "identifiers": ["summit-retail@company.com"], "person_name_shown": false,
+         "condition": "PRESENT", "related": []}
+      ],
+      "notes": "No restore permission is shown for any archive, so the restore state is unknown (PRESENT only). Activity: '25 Apr backup_9286 restored · Completed', '24 Apr backup_9281 restored · Completed'."
+    },
+    "evidence_37": {
+      "image": "security_audit_explorer_20260905.png",
+      "screen_time": null,
+      "records": [
+        {"key": "audit_record_003", "identifiers": ["user_03"], "person_name_shown": false, "condition": "PRESENT", "related": []},
+        {"key": "audit_record_002", "identifiers": ["user_03"], "person_name_shown": false, "condition": "PRESENT", "related": []},
+        {"key": "audit_record_001", "identifiers": ["user_03"], "person_name_shown": false, "condition": "PRESENT", "related": []},
+        {"key": "audit_record_006", "identifiers": ["user_03"], "person_name_shown": false, "condition": "PRESENT", "related": []},
+        {"key": "audit_record_005", "identifiers": ["user_03"], "person_name_shown": false, "condition": "PRESENT", "related": []},
+        {"key": "audit_record_004", "identifiers": ["user_03"], "person_name_shown": false, "condition": "PRESENT", "related": []}
+      ],
+      "notes": "Subject filter user_03, 18-26 Aug 2026 UTC. audit_record_003 = Account closure recorded, recorded_at 2026-08-25T04:03:00Z, integrity Valid."
+    },
+    "evidence_42": {
+      "image": "deleted_account_reference_20260310.png",
+      "screen_time": null,
+      "records": [
+        {"key": "user_17", "identifiers": ["user_17"], "person_name_shown": false,
+         "condition": "PRESENT", "related": [], "status": "Retained reference"}
+      ],
+      "notes": "No resource ID on screen; the page title is the customer key user_17. No name, email or phone shown. 'Most recent update 10 Mar 2026 07:18 UTC' is after the manifest capture (10 Mar 06:00)."
+    },
+    "evidence_46": {
+      "image": "object_storage_browser_20260213.png",
+      "screen_time": "2026-02-13T08:00:00Z",
+      "records": [
+        {"key": "delivery_confirmation_19.pdf", "identifiers": [], "person_name_shown": false, "condition": "PRESENT", "related": []},
+        {"key": "delivery_confirmation_20.pdf", "identifiers": [], "person_name_shown": false, "condition": "PRESENT", "related": []},
+        {"key": "return_label_4821.pdf", "identifiers": [], "person_name_shown": false, "condition": "PRESENT", "related": []},
+        {"key": "return_label_4876.pdf", "identifiers": [], "person_name_shown": false, "condition": "PRESENT", "related": []},
+        {"key": "invoice_NS-10493.pdf", "identifiers": [], "person_name_shown": false, "condition": "PRESENT", "related": []},
+        {"key": "parcel_damage_7713.jpg", "identifiers": [], "person_name_shown": false, "condition": "PRESENT", "related": []},
+        {"key": "customer_export_2026-02-10.zip", "identifiers": [], "person_name_shown": false, "condition": "PRESENT", "related": []},
+        {"key": "customer_export_2026-02-12.zip", "identifiers": [], "person_name_shown": false, "condition": "PRESENT", "related": []}
+      ],
+      "notes": "Bucket northstar-customer-data, prefix eu-west-1/support-attachments/2026/02, 'Captured 13 Feb 2026 08:00 UTC'. No person identifiers on screen; uploader is 'support-service'."
+    },
+    "evidence_60": {
+      "image": "marketing_profile_console.png",
+      "screen_time": null,
+      "records": [
+        {"key": "marketing_001", "identifiers": ["sj.park@naver.com", "+82 10-5837-9451"],
+         "person_name_shown": true, "condition": "PRESENT", "related": [], "email_opt_in": "Yes"}
+      ],
+      "notes": "Name Soo-jin Park, status Live, last refreshed 15 Sep 2026 23:40 UTC. CONFLICT: catalog link activity_4008 says marketing_001 belongs to kwame-mensah@proton.me / user_09."
+    }
+  }
+}

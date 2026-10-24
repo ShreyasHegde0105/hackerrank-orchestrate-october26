@@ -1,0 +1,96 @@
+{
+  "image_file": "connector_management_console_20260807.png",
+  "image_sha256": "e81fabc93ea1b5f4c918d934cdb2bea05d61737adfcc29f281494f5d8ec46355",
+  "method": "manual",
+  "model": "manual-transcription",
+  "prompt_version": "screenshot-v1",
+  "result": {
+    "application": "BridgeOps",
+    "captured_at_text": "PRODUCTION · eu-west · 07 Aug 2026 08:00 UTC",
+    "other_identifiers": [],
+    "page_title": "Connections",
+    "records": [
+      {
+        "fields": [
+          {
+            "field": "Destination",
+            "value": "customer_analytics_warehouse"
+          },
+          {
+            "field": "Mode",
+            "value": "Continuous"
+          },
+          {
+            "field": "Sync mode",
+            "value": "Continuous sync"
+          },
+          {
+            "field": "Events/hour",
+            "value": "1,284"
+          },
+          {
+            "field": "Last contact",
+            "value": "07:59:42"
+          },
+          {
+            "field": "Owner",
+            "value": "Data Platform"
+          },
+          {
+            "field": "Last response",
+            "value": "200 OK · 1.8 s"
+          }
+        ],
+        "identifiers": [
+          {
+            "field": "Selector",
+            "value": "jain.aditi@gmail.com"
+          }
+        ],
+        "kind_hint": "data connector",
+        "label": null,
+        "related_references": [],
+        "resource_id": "data_flow_1121",
+        "status_text": "Healthy"
+      },
+      {
+        "fields": [
+          {
+            "field": "Destination",
+            "value": "customer_analytics_warehouse"
+          },
+          {
+            "field": "Mode",
+            "value": "Continuous"
+          },
+          {
+            "field": "Events/hour",
+            "value": "842"
+          },
+          {
+            "field": "Last contact",
+            "value": "07:59:36"
+          }
+        ],
+        "identifiers": [
+          {
+            "field": "Selector",
+            "value": "lucia-torres@gmail.com"
+          }
+        ],
+        "kind_hint": "data connector",
+        "label": null,
+        "related_references": [],
+        "resource_id": "data_flow_9846",
+        "status_text": null
+      }
+    ]
+  },
+  "subject": "evidence_14",
+  "transcribed_at": "2026-10-24",
+  "transcriber": "Claude Code (claude-opus-5-5), image viewed directly by the coding agent",
+  "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0
+  }
+}

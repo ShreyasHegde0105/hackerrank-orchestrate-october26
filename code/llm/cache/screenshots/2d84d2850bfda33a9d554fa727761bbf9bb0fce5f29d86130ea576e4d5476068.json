@@ -1,0 +1,186 @@
+{
+  "image_file": "object_storage_browser_20260213.png",
+  "image_sha256": "96e9a191380c29b9e0ab997007268c4cd6353cb6721ebd1ed4a32599d8d37e04",
+  "method": "manual",
+  "model": "manual-transcription",
+  "prompt_version": "screenshot-v1",
+  "result": {
+    "application": "Nimbus Object Storage",
+    "captured_at_text": "Captured 13 Feb 2026 08:00 UTC",
+    "other_identifiers": [],
+    "page_title": "northstar-customer-data",
+    "records": [
+      {
+        "fields": [
+          {
+            "field": "Size",
+            "value": "684 KB"
+          },
+          {
+            "field": "Version",
+            "value": "v3"
+          },
+          {
+            "field": "Content type",
+            "value": "application/pdf"
+          },
+          {
+            "field": "Encryption",
+            "value": "AES-256"
+          },
+          {
+            "field": "Uploader",
+            "value": "support-service"
+          },
+          {
+            "field": "Modified",
+            "value": "12 Feb 2026 18:42 UTC"
+          },
+          {
+            "field": "Prefix",
+            "value": "eu-west-1 / support-attachments / 2026 / 02"
+          }
+        ],
+        "identifiers": [],
+        "kind_hint": "support attachment object",
+        "label": "delivery_confirmation_19.pdf",
+        "related_references": [],
+        "resource_id": null,
+        "status_text": null
+      },
+      {
+        "fields": [
+          {
+            "field": "Size",
+            "value": "712 KB"
+          },
+          {
+            "field": "Modified",
+            "value": "11 Feb 14:17"
+          }
+        ],
+        "identifiers": [],
+        "kind_hint": "support attachment object",
+        "label": "delivery_confirmation_20.pdf",
+        "related_references": [],
+        "resource_id": null,
+        "status_text": null
+      },
+      {
+        "fields": [
+          {
+            "field": "Size",
+            "value": "203 KB"
+          },
+          {
+            "field": "Modified",
+            "value": "10 Feb 09:33"
+          }
+        ],
+        "identifiers": [],
+        "kind_hint": "support attachment object",
+        "label": "return_label_4821.pdf",
+        "related_references": [],
+        "resource_id": null,
+        "status_text": null
+      },
+      {
+        "fields": [
+          {
+            "field": "Size",
+            "value": "198 KB"
+          },
+          {
+            "field": "Modified",
+            "value": "11 Feb 16:05"
+          }
+        ],
+        "identifiers": [],
+        "kind_hint": "support attachment object",
+        "label": "return_label_4876.pdf",
+        "related_references": [],
+        "resource_id": null,
+        "status_text": null
+      },
+      {
+        "fields": [
+          {
+            "field": "Size",
+            "value": "318 KB"
+          },
+          {
+            "field": "Modified",
+            "value": "10 Feb 11:21"
+          }
+        ],
+        "identifiers": [],
+        "kind_hint": "support attachment object",
+        "label": "invoice_NS-10493.pdf",
+        "related_references": [],
+        "resource_id": null,
+        "status_text": null
+      },
+      {
+        "fields": [
+          {
+            "field": "Size",
+            "value": "2.4 MB"
+          },
+          {
+            "field": "Modified",
+            "value": "12 Feb 10:08"
+          }
+        ],
+        "identifiers": [],
+        "kind_hint": "support attachment object",
+        "label": "parcel_damage_7713.jpg",
+        "related_references": [],
+        "resource_id": null,
+        "status_text": null
+      },
+      {
+        "fields": [
+          {
+            "field": "Size",
+            "value": "128 MB"
+          },
+          {
+            "field": "Modified",
+            "value": "10 Feb 23:14"
+          }
+        ],
+        "identifiers": [],
+        "kind_hint": "customer export object",
+        "label": "customer_export_2026-02-10.zip",
+        "related_references": [],
+        "resource_id": null,
+        "status_text": null
+      },
+      {
+        "fields": [
+          {
+            "field": "Size",
+            "value": "131 MB"
+          },
+          {
+            "field": "Modified",
+            "value": "12 Feb 21:56"
+          }
+        ],
+        "identifiers": [],
+        "kind_hint": "customer export object",
+        "label": "customer_export_2026-02-12.zip",
+        "related_references": [],
+        "resource_id": null,
+        "status_text": null
+      }
+    ]
+  },
+  "subject": "evidence_46",
+  "transcribed_at": "2026-10-24",
+  "transcriber": "Claude Code (claude-opus-5-5), image viewed directly by the coding agent",
+  "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0
+  }
+}

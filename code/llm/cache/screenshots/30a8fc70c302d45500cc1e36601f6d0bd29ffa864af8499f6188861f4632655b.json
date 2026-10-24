@@ -1,0 +1,73 @@
+{
+  "image_file": "marketing_profile_console.png",
+  "image_sha256": "51fa0e6a38f8fa3629ba1b0d0b90b4ed139715956b97bfd09a6f1a6232c15df5",
+  "method": "manual",
+  "model": "manual-transcription",
+  "prompt_version": "screenshot-v1",
+  "result": {
+    "application": "Audience Operations",
+    "captured_at_text": null,
+    "other_identifiers": [],
+    "page_title": "Soo-jin Park",
+    "records": [
+      {
+        "fields": [
+          {
+            "field": "Market",
+            "value": "South Korea"
+          },
+          {
+            "field": "Language",
+            "value": "Korean"
+          },
+          {
+            "field": "Email opt-in",
+            "value": "Yes"
+          },
+          {
+            "field": "SMS opt-in",
+            "value": "No"
+          },
+          {
+            "field": "Last refreshed",
+            "value": "15 Sep 2026 23:40 UTC"
+          },
+          {
+            "field": "Audience",
+            "value": "Returning customers — East Asia"
+          },
+          {
+            "field": "Last campaign",
+            "value": "Autumn offers"
+          }
+        ],
+        "identifiers": [
+          {
+            "field": "Name",
+            "value": "Soo-jin Park"
+          },
+          {
+            "field": "Email",
+            "value": "sj.park@naver.com"
+          },
+          {
+            "field": "Phone",
+            "value": "+82 10-5837-9451"
+          }
+        ],
+        "kind_hint": "marketing audience profile",
+        "label": null,
+        "related_references": [],
+        "resource_id": "marketing_001",
+        "status_text": "Live"
+      }
+    ]
+  },
+  "subject": "evidence_60",
+  "transcribed_at": "2026-10-24",
+  "transcriber": "Claude Code (claude-opus-5-5), image viewed directly by the coding agent",
+  "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0
+  }
+}

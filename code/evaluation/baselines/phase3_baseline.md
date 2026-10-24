@@ -1,18 +1,15 @@
-# Phase 3 baseline
+# Phase 3 baseline (final)
 
-Recorded 2026-10-24T15:05:14Z on commit `e7e465c` plus uncommitted Phase 1-3 files, Python 3.14.7, pdfplumber 0.11.10.
+Recorded 2026-10-24T16:48:10Z on commit `0ce6b61` plus the uncommitted Phase 3 completion work, Python 3.14.7, pdfplumber 0.11.10.
 
-| Check | Phase 1 | Phase 2 | Phase 3 |
-|---|---|---|---|
-| Full test suite | 50 passed | 124 passed | 196 passed |
-| Phase 1 tests alone | 50 passed | 50 passed | 50 passed |
-| Phase 2 tests alone | - | 74 passed | 74 passed |
-| Evaluator calibration | 100%, 0 issues | identical | identical (`phase3_metrics.json`) |
-| Evidence files processed | - | - | 94/94 (83 parsed, 11 pending vision, 0 failed) |
-| Observations / coverages | - | - | 2903 / 386 |
-| Sample-answer (case, record) pairs linked to subject | - | - | 84 of 111 |
-
-The evaluator run is still a calibration of the scorer only; predictions start in Phase 5.
+| Check | Before (commit 0ce6b61) | After |
+|---|---|---|
+| Full test suite | 196 passed | 241 passed, 0 skipped |
+| Phase 1 / Phase 2 / earlier Phase 3 tests alone | 50 / 74 / 72 passed | 50 / 74 / 72 passed |
+| Evaluator calibration | identical to Phase 1 | identical to Phase 1 |
+| Evidence files parsed | 83 of 94 (11 screenshots pending) | 94 of 94 |
+| Observations / coverages | 2903 / 386 | 2934 / 386 |
+| Screenshot ground truth | not measured | 165/165 facts match |
 
 ## Test suite
 
@@ -40,6 +37,20 @@ code/tests/integration/test_identity_real_data.py::test_catalog_links_are_parsed
 code/tests/integration/test_identity_real_data.py::test_resolved_identities_reach_the_sample_answer_records PASSED
 code/tests/integration/test_identity_report.py::test_identity_report_runs_and_reports_no_unresolved PASSED
 code/tests/integration/test_profile.py::test_profile_runs_and_recognises_every_log_format PASSED
+code/tests/integration/test_screenshots_index_export_real.py::test_every_file_is_extracted_with_manual_screenshots PASSED
+code/tests/integration/test_screenshots_index_export_real.py::test_cached_transcriptions_are_tied_to_their_images PASSED
+code/tests/integration/test_screenshots_index_export_real.py::test_changed_image_bytes_do_not_reuse_a_transcription PASSED
+code/tests/integration/test_screenshots_index_export_real.py::test_screenshots_match_ground_truth PASSED
+code/tests/integration/test_screenshots_index_export_real.py::test_comparison_detects_each_kind_of_mismatch[<lambda>-identifiers] PASSED
+code/tests/integration/test_screenshots_index_export_real.py::test_comparison_detects_each_kind_of_mismatch[<lambda>-condition] PASSED
+code/tests/integration/test_screenshots_index_export_real.py::test_comparison_detects_each_kind_of_mismatch[<lambda>-screen_time] PASSED
+code/tests/integration/test_screenshots_index_export_real.py::test_comparison_detects_each_kind_of_mismatch[<lambda>-related] PASSED
+code/tests/integration/test_screenshots_index_export_real.py::test_comparison_detects_each_kind_of_mismatch[<lambda>-extra_record] PASSED
+code/tests/integration/test_screenshots_index_export_real.py::test_comparison_detects_each_kind_of_mismatch[<lambda>-record_found,extra_record] PASSED
+code/tests/integration/test_screenshots_index_export_real.py::test_screen_anomalies_and_the_marketing_conflict_are_reported PASSED
+code/tests/integration/test_screenshots_index_export_real.py::test_index_partitions_every_observation_without_leakage PASSED
+code/tests/integration/test_screenshots_index_export_real.py::test_duplicate_accounting_on_real_data PASSED
+code/tests/integration/test_screenshots_index_export_real.py::test_export_round_trip_and_repeated_runs_are_byte_identical PASSED
 code/tests/unit/test_dataset_loader.py::test_loads_typed_records PASSED
 code/tests/unit/test_dataset_loader.py::test_activity_is_sorted_by_time_not_file_order PASSED
 code/tests/unit/test_dataset_loader.py::test_citable_time_for_files_activities_and_audit_rows PASSED
@@ -91,6 +102,18 @@ code/tests/unit/test_evidence_docs_vision.py::test_exposure[fields5-UNLINKED] PA
 code/tests/unit/test_evidence_docs_vision.py::test_exposure[fields6-UNKNOWN] PASSED
 code/tests/unit/test_evidence_docs_vision.py::test_identity_refs_never_include_names_or_resource_ids PASSED
 code/tests/unit/test_evidence_docs_vision.py::test_one_broken_file_does_not_stop_the_run PASSED
+code/tests/unit/test_evidence_index_export.py::test_identical_rows_in_one_file_are_flagged_and_kept PASSED
+code/tests/unit/test_evidence_index_export.py::test_repeated_lookups_in_different_traces_are_not_duplicates PASSED
+code/tests/unit/test_evidence_index_export.py::test_same_fact_from_two_files_is_counted_not_merged PASSED
+code/tests/unit/test_evidence_index_export.py::test_within_file_duplicates_become_warnings_in_extraction PASSED
+code/tests/unit/test_evidence_index_export.py::test_person_lookup_never_leaks_between_people PASSED
+code/tests/unit/test_evidence_index_export.py::test_unresolved_and_identifier_less_evidence_is_kept_separately PASSED
+code/tests/unit/test_evidence_index_export.py::test_lookups_normalise_identifiers_and_keep_provenance PASSED
+code/tests/unit/test_evidence_index_export.py::test_lookup_order_is_deterministic PASSED
+code/tests/unit/test_evidence_index_export.py::test_catalog_link_conflict_is_reported PASSED
+code/tests/unit/test_evidence_index_export.py::test_jsonl_round_trip_and_canonical_order PASSED
+code/tests/unit/test_evidence_index_export.py::test_export_rejects_bad_input PASSED
+code/tests/unit/test_evidence_index_export.py::test_round_trip_preserves_every_field PASSED
 code/tests/unit/test_evidence_json_sql.py::test_bundle_keeps_each_inner_snapshot_time PASSED
 code/tests/unit/test_evidence_json_sql.py::test_empty_snapshot_is_coverage_with_no_resources PASSED
 code/tests/unit/test_evidence_json_sql.py::test_lookup_history_uses_each_item_time PASSED
@@ -128,6 +151,25 @@ code/tests/unit/test_evidence_logs.py::test_record_lookup_lines_use_their_stated
 code/tests/unit/test_evidence_logs.py::test_support_categories_come_from_events_not_the_system PASSED
 code/tests/unit/test_evidence_logs.py::test_unparseable_and_badly_timed_lines_are_reported_not_fatal PASSED
 code/tests/unit/test_evidence_logs.py::test_provenance_is_kept PASSED
+code/tests/unit/test_evidence_untrusted_text.py::test_instruction_text_in_a_support_message_is_just_content PASSED
+code/tests/unit/test_evidence_untrusted_text.py::test_state_words_inside_a_quoted_log_value_do_not_change_state PASSED
+code/tests/unit/test_evidence_untrusted_text.py::test_instruction_text_on_a_screenshot_is_kept_verbatim_and_ignored PASSED
+code/tests/unit/test_evidence_untrusted_text.py::test_unicode_survives_extraction_and_names_are_never_identifiers PASSED
+code/tests/unit/test_evidence_untrusted_text.py::test_unicode_case_folding_of_emails PASSED
+code/tests/unit/test_evidence_untrusted_text.py::test_unicode_in_logs_and_pdfs PASSED
+code/tests/unit/test_evidence_untrusted_text.py::test_screen_time_parsing[Executed 01 Sep 2026 06:00:14 UTC-expected0] PASSED
+code/tests/unit/test_evidence_untrusted_text.py::test_screen_time_parsing[Captured 13 Feb 2026 08:00 UTC-expected1] PASSED
+code/tests/unit/test_evidence_untrusted_text.py::test_screen_time_parsing[indexed_at 2026-09-01T05:58:21Z-expected2] PASSED
+code/tests/unit/test_evidence_untrusted_text.py::test_screen_time_parsing[Last contact 24 Sep 2026 09:14 JST-None] PASSED
+code/tests/unit/test_evidence_untrusted_text.py::test_screen_time_parsing[Created 20 Jun 14:18 UTC-None] PASSED
+code/tests/unit/test_evidence_untrusted_text.py::test_screen_time_parsing[-None] PASSED
+code/tests/unit/test_evidence_untrusted_text.py::test_seconds_after_capture_are_detected PASSED
+code/tests/unit/test_evidence_untrusted_text.py::test_connector_states_use_whole_words[Healthy-fields0-ACTIVE] PASSED
+code/tests/unit/test_evidence_untrusted_text.py::test_connector_states_use_whole_words[Paused-fields1-DISABLED] PASSED
+code/tests/unit/test_evidence_untrusted_text.py::test_connector_states_use_whole_words[None-fields2-DISABLED] PASSED
+code/tests/unit/test_evidence_untrusted_text.py::test_connector_states_use_whole_words[None-fields3-PRESENT] PASSED
+code/tests/unit/test_evidence_untrusted_text.py::test_future_deadlines_are_not_reported_as_anomalies PASSED
+code/tests/unit/test_evidence_untrusted_text.py::test_manual_transcriptions_are_labelled_as_such PASSED
 code/tests/unit/test_identity.py::test_phone_formats_normalise_to_the_same_digits[+1 (202) 555-0101] PASSED
 code/tests/unit/test_identity.py::test_phone_formats_normalise_to_the_same_digits[1-202-555-0101] PASSED
 code/tests/unit/test_identity.py::test_phone_formats_normalise_to_the_same_digits[001 202 555 0101] PASSED
@@ -213,5 +255,5 @@ code/tests/unit/test_validator.py::test_not_applicable_rules PASSED
 code/tests/unit/test_validator.py::test_bad_status_and_bad_json PASSED
 code/tests/unit/test_validator.py::test_evidence_after_audit_and_unknown_evidence PASSED
 code/tests/unit/test_validator.py::test_file_level_checks PASSED
-============================= 196 passed in 8.81s =============================
+============================ 241 passed in 32.71s =============================
 ```

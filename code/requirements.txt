@@ -1,4 +1,6 @@
-# Python 3.10+
-pdfplumber>=0.11   # deterministic PDF text extraction
-anthropic>=1.0     # vision transcription of screenshots (only when not cached)
-pytest>=8          # tests
+# Python 3.10+ (developed and tested on 3.14.7)
+pdfplumber>=0.11   # deterministic PDF text extraction (required)
+pytest>=8          # tests (required for development)
+# Optional, not needed by default: screenshots are read from the committed manual
+# transcriptions. Only `python code/tools/evidence_report.py --vision` uses it.
+# anthropic>=1.0

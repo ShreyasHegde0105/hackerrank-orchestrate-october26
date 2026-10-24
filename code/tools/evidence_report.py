@@ -3,9 +3,10 @@
 Usage (from the repository root):
     python code/tools/evidence_report.py [--vision]
 
---vision transcribes screenshots with the vision model (needs Anthropic
-credentials); without it, cached transcriptions are used if present and any
-other screenshot is reported as pending.
+By default screenshots are read from the manual transcriptions
+(code/llm/manual_transcriptions/, stored in the cache by
+tools/store_manual_transcriptions.py). --vision uses the vision model
+instead (needs the anthropic package and credentials).
 
 The report covers per-file parser coverage, observation counts, extraction
 issues, identity-linking checks (identifiers that resolve to nobody, or to
@@ -75,6 +76,43 @@ def sample_linkage(dataset, result, index):
     return rows
 
 
+def extra_sections(result, identities) -> list[str]:
+    """Duplicates, lookup-index attribution, catalog-link conflicts, screenshots."""
+    from audit.evidence.duplicates import analyse_duplicates
+    from audit.evidence.index import EvidenceIndex
+    import screenshot_accuracy
+    lines = []
+    summary = analyse_duplicates(result.observations).summary()
+    lines += ["## 7. Duplicate accounting", "",
+              "Definitions are in `audit/evidence/duplicates.py`. Nothing is removed.", ""]
+    lines += [f"- {k}: {v}" for k, v in summary.items()]
+    index = EvidenceIndex(result, identities)
+    lines += ["", "## 8. Lookup index attribution", ""]
+    lines += [f"- {k}: {v}" for k, v in index.counts().items()]
+    conflicts = index.link_conflicts()
+    lines += ["", f"Catalog links contradicted by evidence: {len(conflicts)}"]
+    for link, obs, owners in conflicts:
+        lines.append(f"- {link.activity_id} links {link.resource_id} to {link.user_id}, but "
+                     f"{obs.obs_id} shows {[r.raw for r in obs.identity_refs]} "
+                     f"(known owners: {list(owners) or 'none'})")
+    png = {f: r for f, r in result.files.items() if r.kind == "png"}
+    methods = Counter(str(r.details.get("transcription")) for r in png.values())
+    rows = screenshot_accuracy.compare(result.observations)
+    matched = sum(r["match"] for r in rows)
+    lines += ["", "## 9. Screenshots", "",
+              f"{len(png)} screenshots; transcription method: "
+              + ", ".join(f"{k}={v}" for k, v in sorted(methods.items()))
+              + ". Manual transcriptions were made by the coding agent viewing each PNG; they "
+              "are not automated runtime extraction.",
+              f"Ground-truth comparison (test-only fixture): {matched}/{len(rows)} facts match.", ""]
+    for r in rows:
+        if not r["match"]:
+            lines.append(f"- MISMATCH {r['file']} {r['record']} {r['fact']}: expected "
+                         f"{r['expected']!r}, got {r['actual']!r}")
+    lines.append("")
+    return lines
+
+
 def timing_attribution_check(dataset) -> list[str]:
     """Measure whether activity timing alone identifies a case's own account:
     the deletion_worker account deletion nearest to reported_at, within
@@ -114,13 +152,15 @@ def timing_attribution_check(dataset) -> list[str]:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--vision", action="store_true",
-                        help="call the vision model for screenshots not yet cached")
+                        help="read screenshots with the vision model (needs credentials) "
+                             "instead of the manual transcriptions")
     args = parser.parse_args(argv)
 
     dataset = load_dataset(requests_file="sample_deletion_requests.csv")
     index = IdentityIndex.from_dataset(dataset)
     usage = UsageLedger()
-    transcriber = ScreenshotTranscriber(usage=usage, allow_api=args.vision)
+    transcriber = (ScreenshotTranscriber(usage=usage, allow_api=True) if args.vision
+                   else ScreenshotTranscriber.manual(usage=usage))
     result = extract_evidence(dataset, transcriber=transcriber)
 
     lines = ["# Evidence extraction report", "",
@@ -201,10 +241,11 @@ def main(argv=None) -> int:
     lines.append("")
 
     lines += timing_attribution_check(dataset)
+    lines += extra_sections(result, index)
 
     calls = usage.api_calls()
-    lines += ["## 6. Model usage in this run", "",
-              f"Vision API calls: {len(calls)}; cache hits: {len(usage.records) - len(calls)}; "
+    lines += ["## 10. Model usage in this run", "",
+              f"Vision API calls: {len(calls)}; transcriptions served from the cache: {len(usage.records) - len(calls)} (methods: {dict(Counter(r.method for r in usage.records))}); "
               f"input tokens {sum(r.input_tokens for r in calls)}, output tokens "
               f"{sum(r.output_tokens for r in calls)}.", ""]
 

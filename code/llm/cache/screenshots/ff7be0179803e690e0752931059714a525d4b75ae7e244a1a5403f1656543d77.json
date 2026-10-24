@@ -1,0 +1,77 @@
+{
+  "image_file": "analytics_profile_view_20260713.png",
+  "image_sha256": "4e4cb259bc2010b622b0c53fe5872258f994fefc23452a83bb27473758693484",
+  "method": "manual",
+  "model": "manual-transcription",
+  "prompt_version": "screenshot-v1",
+  "result": {
+    "application": "Pulse Analytics",
+    "captured_at_text": null,
+    "other_identifiers": [],
+    "page_title": "Omar Darwish",
+    "records": [
+      {
+        "fields": [
+          {
+            "field": "Sessions",
+            "value": "12"
+          },
+          {
+            "field": "Products viewed",
+            "value": "19"
+          },
+          {
+            "field": "Completed orders",
+            "value": "2"
+          },
+          {
+            "field": "Revenue",
+            "value": "USD 167.42"
+          },
+          {
+            "field": "Market",
+            "value": "AE"
+          },
+          {
+            "field": "Audience",
+            "value": "Returning shopper"
+          },
+          {
+            "field": "Last activity",
+            "value": "13 Jul 2026 14:22 UTC"
+          },
+          {
+            "field": "First seen",
+            "value": "21 Apr 2026 09:14 UTC"
+          }
+        ],
+        "identifiers": [
+          {
+            "field": "Name",
+            "value": "Omar Darwish"
+          },
+          {
+            "field": "User",
+            "value": "user_20"
+          },
+          {
+            "field": "Email",
+            "value": "darwish.omar@icloud.com"
+          }
+        ],
+        "kind_hint": "analytics user profile",
+        "label": null,
+        "related_references": [],
+        "resource_id": "analytics_7438",
+        "status_text": "Last 90 days"
+      }
+    ]
+  },
+  "subject": "evidence_19",
+  "transcribed_at": "2026-10-24",
+  "transcriber": "Claude Code (claude-opus-5-5), image viewed directly by the coding agent",
+  "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0
+  }
+}

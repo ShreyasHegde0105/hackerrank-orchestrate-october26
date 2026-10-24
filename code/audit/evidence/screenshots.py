@@ -1,9 +1,11 @@
 """Turn a screenshot transcription (llm/vision.py) into Observations.
 
-The vision model only copies text off the screen. Everything here is
-deterministic: IDs are checked against the resource-ID pattern, identifiers
-are normalised, and states come from fixed keyword rules. Every observation
-is marked AI_EXTRACTED so later stages can weigh it accordingly.
+A transcription (manual or by a vision model) only copies text off the
+screen. Everything here is deterministic: IDs are checked against the
+resource-ID pattern, identifiers are normalised, and states come from fixed
+whole-word rules. Every observation is marked MANUAL_TRANSCRIPTION or
+AI_EXTRACTED, so later stages know how the screenshot was read. On-screen
+text is treated as data: an instruction-like string is just a value.
 """
 from __future__ import annotations
 
@@ -30,7 +32,9 @@ from audit.identity import classify_identifier
 from audit.models import EvidenceFile, IdentifierKind
 
 _SCREEN_TIME = re.compile(r"(?P<day>\d{1,2}) (?P<mon>[A-Z][a-z]{2}) (?P<year>\d{4})"
-                          r"(?: (?P<hh>\d{1,2}):(?P<mm>\d{2}))?(?: UTC)?")
+                          r"(?: (?P<hh>\d{1,2}):(?P<mm>\d{2})(?::(?P<ss>\d{2}))?)?"
+                          r"(?: (?P<tz>UTC))?")
+_ISO_TIME = re.compile(r"\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\b")
 _MONTHS = {m: i for i, m in enumerate(
     ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], 1)}
 KIND_HINTS = (  # (keyword in the on-screen description, category), first match wins
@@ -43,8 +47,9 @@ KIND_HINTS = (  # (keyword in the on-screen description, category), first match 
     ("security event", "SECURITY_AUDIT_LOG"), ("search", "SEARCH_INDEX_ENTRY"),
     ("ticket", "SUPPORT_MESSAGE"), ("customer profile", "USER_PROFILE"),
 )
-OFF_WORDS = ("disabled", "paused", "stopped", "inactive", "off")
-ON_WORDS = ("enabled", "active", "live", "running", "on")
+# Whole words only: "on" must not match inside "Continuous" or "connector".
+OFF_WORDS = {"disabled", "paused", "stopped", "inactive", "off", "suspended"}
+ON_WORDS = {"enabled", "active", "live", "running", "healthy", "continuous", "on"}
 
 
 def _field_key(label: str) -> str:
@@ -52,21 +57,57 @@ def _field_key(label: str) -> str:
 
 
 def screen_time(text: str | None) -> datetime | None:
+    """A full date on screen ('01 Sep 2026 06:00:14 UTC' or ISO), with seconds when
+    shown. Times in other zones (e.g. 'JST') and dates without a year are not
+    converted: they return None rather than a guess."""
     if not text:
         return None
+    iso = _ISO_TIME.search(text)
+    if iso:
+        return datetime.strptime(iso.group(0), "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
     match = _SCREEN_TIME.search(text)
     if not match or match.group("mon") not in _MONTHS:
         return None
+    rest = text[match.end():].strip()
+    if match.group("hh") and not match.group("tz") and rest[:3].isalpha():
+        return None  # a time in a named non-UTC zone
     return datetime(int(match.group("year")), _MONTHS[match.group("mon")], int(match.group("day")),
-                    int(match.group("hh") or 0), int(match.group("mm") or 0), tzinfo=timezone.utc)
+                    int(match.group("hh") or 0), int(match.group("mm") or 0),
+                    int(match.group("ss") or 0), tzinfo=timezone.utc)
+
+
+PAST_EVENT_WORDS = {"created", "update", "updated", "modified", "last", "recorded",
+                    "indexed", "refreshed", "executed", "seen", "captured", "delivered"}
+
+
+def _is_past_event_field(name: str) -> bool:
+    """Fields that record something that already happened (so a value after the
+    capture time is impossible), as opposed to deadlines like expires or retention_end."""
+    return bool(set(name.split("_")) & PAST_EVENT_WORDS)
+
+
+def _words(text: str) -> set[str]:
+    return set(re.findall(r"[a-z]+", text.lower()))
+
+
+STATE_FIELD_WORDS = {"status", "state", "mode", "sync", "enabled"}
 
 
 def _condition(category: str | None, status: str, fields: dict) -> Condition:
-    text = " ".join([status] + [f"{k} {v}" for k, v in fields.items()]).lower()
+    """State comes only from the status badge and state-like fields (status,
+    mode, sync, enabled), never from free text such as notes or messages, so
+    instruction-like words elsewhere on screen cannot change it."""
+    state_values = [str(v) for k, v in fields.items() if set(k.split("_")) & STATE_FIELD_WORDS]
+    words = _words(" ".join([status] + state_values))
     if category == "DATA_FLOW":
-        if any(w in text for w in OFF_WORDS):
+        for key, value in fields.items():
+            if "enabled" in key and _words(str(value)) & {"yes", "true"}:
+                return Condition.ACTIVE
+            if "enabled" in key and _words(str(value)) & {"no", "false"}:
+                return Condition.DISABLED
+        if words & OFF_WORDS:
             return Condition.DISABLED
-        if any(w in text for w in ON_WORDS):
+        if words & ON_WORDS:
             return Condition.ACTIVE
     if category == "BACKUP_ARCHIVE":
         restore = " ".join(str(v) for k, v in fields.items() if "restore" in k).lower().split()
@@ -77,18 +118,25 @@ def _condition(category: str | None, status: str, fields: dict) -> Condition:
     return Condition.PRESENT
 
 
-def observations_from_transcription(evidence: EvidenceFile, transcription: dict) -> tuple[
+def observations_from_transcription(evidence: EvidenceFile, transcription: dict,
+                                    confidence: Confidence = Confidence.AI_EXTRACTED) -> tuple[
         list[Observation], list[ExtractionIssue]]:
+    """`confidence` records how the transcription was made: AI_EXTRACTED for a
+    vision model, MANUAL_TRANSCRIPTION for a hand transcription."""
     issues: list[ExtractionIssue] = []
+    extractor = "png/manual" if confidence is Confidence.MANUAL_TRANSCRIPTION else "png/vision"
     shown_time = screen_time(transcription.get("captured_at_text"))
     if shown_time and shown_time > evidence.captured_at:
-        issues.append(ExtractionIssue(evidence.file_id, "captured_at_text", "warning",
-                                      "on-screen time is after the manifest capture; ignored"))
+        issues.append(ExtractionIssue(
+            evidence.file_id, "captured_at_text", "warning",
+            f"on-screen time {shown_time:%Y-%m-%dT%H:%M:%SZ} is after the manifest capture "
+            f"{evidence.captured_at:%Y-%m-%dT%H:%M:%SZ}; the manifest time is used"))
         shown_time = None
     observed_at = shown_time or evidence.captured_at
     basis = TimeBasis.DOCUMENT if shown_time else TimeBasis.MANIFEST
     page = {"page_title": transcription.get("page_title"),
-            "application": transcription.get("application")}
+            "application": transcription.get("application"),
+            "captured_at_text": transcription.get("captured_at_text")}
     observations = []
     for i, record in enumerate(transcription.get("records", [])):
         locator = f"records[{i}]"
@@ -109,6 +157,15 @@ def observations_from_transcription(evidence: EvidenceFile, transcription: dict)
             elif value.strip():
                 named = True  # a person's name is on screen: identifying, never matched
         fields = {_field_key(p["field"]): p.get("value") for p in record.get("fields", [])}
+        for name, value in fields.items():
+            if not _is_past_event_field(name):
+                continue  # expiry, retention or expected dates are meant to be in the future
+            shown = screen_time(str(value))
+            if shown and shown > evidence.captured_at:
+                issues.append(ExtractionIssue(
+                    evidence.file_id, f"{locator}.{name}", "warning",
+                    f"screen shows {name} {shown:%Y-%m-%dT%H:%M:%SZ}, after the manifest "
+                    f"capture {evidence.captured_at:%Y-%m-%dT%H:%M:%SZ}"))
         if labels and re.search(r"\.\w{2,4}$", labels[0]):
             fields.setdefault("file_name", labels[0])
         category, category_basis = classify_category(resource_id, None, fields)
@@ -132,8 +189,9 @@ def observations_from_transcription(evidence: EvidenceFile, transcription: dict)
             evidence.file_id, evidence.kind, locator, observed_at, basis, evidence.captured_at,
             system_for_resource(resource_id), resource_id, category, category_basis,
             _condition(category, status, fields), exposure, unique_refs(refs), tuple(related),
-            tuple(labels), extractor="png/vision", confidence=Confidence.AI_EXTRACTED,
+            tuple(labels), extractor=extractor, confidence=confidence,
             attributes={**page, **fields, "status_text": status or None,
+                        "person_name_shown": named,
                         "kind_hint": record.get("kind_hint"),
                         "related_references": record.get("related_references", [])}))
     loose = [ref for value in transcription.get("other_identifiers", [])
@@ -143,7 +201,7 @@ def observations_from_transcription(evidence: EvidenceFile, transcription: dict)
             evidence.file_id, evidence.kind, "page", observed_at, basis, evidence.captured_at,
             None, None, None, "undetermined: identifiers not tied to a record",
             Condition.MENTIONED, Exposure.IDENTIFIABLE, unique_refs(loose),
-            extractor="png/vision", confidence=Confidence.AI_EXTRACTED, attributes=dict(page)))
+            extractor=extractor, confidence=confidence, attributes=dict(page)))
     if not observations:
         issues.append(ExtractionIssue(evidence.file_id, "$", "warning",
                                       "transcription contains no records"))

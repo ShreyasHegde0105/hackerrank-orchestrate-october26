@@ -9,3 +9,6 @@ venv/
 # Python caches
 __pycache__/
 .pytest_cache/
+
+# Generated exports (reproducible with code/tools/export_evidence.py)
+artifacts/

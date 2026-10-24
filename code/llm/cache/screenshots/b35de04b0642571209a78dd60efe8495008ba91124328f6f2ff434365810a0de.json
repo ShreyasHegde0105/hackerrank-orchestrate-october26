@@ -1,0 +1,58 @@
+{
+  "image_file": "deleted_account_reference_20260310.png",
+  "image_sha256": "68c28a72afd6ed184d5990d15c543f8a516face204f0360f732755a8a63c28be",
+  "method": "manual",
+  "model": "manual-transcription",
+  "prompt_version": "screenshot-v1",
+  "result": {
+    "application": "Customer Reference Registry",
+    "captured_at_text": null,
+    "other_identifiers": [],
+    "page_title": "user_17",
+    "records": [
+      {
+        "fields": [
+          {
+            "field": "Reference type",
+            "value": "Customer key"
+          },
+          {
+            "field": "Created",
+            "value": "11 Jan 2024 08:42 UTC"
+          },
+          {
+            "field": "Most recent update",
+            "value": "10 Mar 2026 07:18 UTC"
+          },
+          {
+            "field": "Owner team",
+            "value": "Account Platform"
+          }
+        ],
+        "identifiers": [
+          {
+            "field": "Customer key",
+            "value": "user_17"
+          }
+        ],
+        "kind_hint": "retained reference (customer key)",
+        "label": "user_17",
+        "related_references": [
+          "ORD-20263245",
+          "CS-3245",
+          "CS-3378",
+          "FIN-7742"
+        ],
+        "resource_id": null,
+        "status_text": "Retained reference"
+      }
+    ]
+  },
+  "subject": "evidence_42",
+  "transcribed_at": "2026-10-24",
+  "transcriber": "Claude Code (claude-opus-5-5), image viewed directly by the coding agent",
+  "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "image_file": "support_ticket_console_20260524.png",
+  "image_sha256": "542b7aec17e6b2f38827896e7eb52c70e4bfaaca22433621be1f80f54884e944",
+  "method": "manual",
+  "model": "manual-transcription",
+  "prompt_version": "screenshot-v1",
+  "result": {
+    "application": "Helpline Console",
+    "captured_at_text": null,
+    "other_identifiers": [],
+    "page_title": "CS-5034 · Where is my delivery?",
+    "records": [
+      {
+        "fields": [
+          {
+            "field": "Assigned",
+            "value": "Maya Chen"
+          },
+          {
+            "field": "Tags",
+            "value": "Delivery · Tracking · Order update"
+          },
+          {
+            "field": "Order",
+            "value": "ORD-20265034"
+          },
+          {
+            "field": "Order status",
+            "value": "In transit"
+          },
+          {
+            "field": "Expected",
+            "value": "26 May 2026"
+          }
+        ],
+        "identifiers": [
+          {
+            "field": "Customer",
+            "value": "Kofi Agyeman"
+          },
+          {
+            "field": "Email",
+            "value": "kagyeman8947@fastmail.com"
+          }
+        ],
+        "kind_hint": "support ticket conversation",
+        "label": "CS-5034",
+        "related_references": [
+          "ORD-20265034"
+        ],
+        "resource_id": "support_1034",
+        "status_text": "Normal priority"
+      }
+    ]
+  },
+  "subject": "evidence_28",
+  "transcribed_at": "2026-10-24",
+  "transcriber": "Claude Code (claude-opus-5-5), image viewed directly by the coding agent",
+  "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0
+  }
+}
