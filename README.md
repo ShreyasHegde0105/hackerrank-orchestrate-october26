@@ -12,6 +12,53 @@ Read [`problem_statement.md`](./problem_statement.md) for the complete challenge
 
 ---
 
+## Solution: Deletion Inspector (setup and run)
+
+### Requirements
+
+- Python 3.10 or newer (tested on 3.14.7).
+- `pip install -r code/requirements.txt`, which installs `pdfplumber` and `pytest`.
+- No API keys, network access or environment variables are needed. The 11 screenshots are read from manual transcriptions committed under `code/llm/`.
+
+### Produce the submission
+
+```bash
+python code/main.py
+```
+
+- **Reads:** `dataset/`.
+- **Writes:** `output.csv` at the repository root (518 rows, sorted by `case_id`), in about 4 s.
+- **Validates:** the file against the output contract right after writing it.
+- **Deterministic:** re-runs write a byte-identical file.
+- **Options:**
+  - `--diagnostics FILE`: writes the reasons behind every case.
+  - `--requests sample_deletion_requests.csv --out <file>`: runs the 32 samples.
+  - `--no-activity-candidates` and `--uncategorised-support-category none`: turn off policy choices P1 and P3 (see `code/docs/PHASE_5_DECISION_ENGINE_REPORT.md`).
+
+### Evaluate and test
+
+```bash
+python code/main.py --requests sample_deletion_requests.csv --out artifacts/sample_predictions.csv
+python code/evaluation/main.py --pred artifacts/sample_predictions.csv --details
+python -m pytest code/tests
+```
+
+### How it works
+
+| Phase | What it does | Where |
+|---|---|---|
+| 1 | Output contract, validator, evaluator | `code/audit/contract.py`, `validator.py`, `code/evaluation/evaluate.py` |
+| 2 | Loads the dataset; resolves each request email to a person with all current and historical identifiers (never by name) | `code/audit/loader.py`, `identity.py` |
+| 3 | Turns all 94 evidence files (SQL, JSON, five log layouts, text, PDF, screenshots) into observations with provenance | `code/audit/evidence/` |
+| 4 | Reconstructs each record per copy at the case's `audit_at`; absence only from qualifying evidence; citations only from files captured by `audit_at` | `code/audit/reconstruct.py` |
+| 5 | Decides deletion intent, applies `deletion_rules.csv`, and builds ordered findings, remediation and verification | `code/audit/intent.py`, `decide.py`, `code/main.py` |
+
+**Further reading:**
+- Reports for each phase: `code/docs/`.
+- Evaluation and usage: `code/evaluation/evaluation_report.md` and `code/evaluation/usage_report.md`.
+
+---
+
 ## Quick Start
 
 Clone the repository and move into the project directory:

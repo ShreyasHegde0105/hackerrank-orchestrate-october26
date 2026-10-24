@@ -1,0 +1,24 @@
+# Phase 4 assumptions record
+
+Decisions taken for temporal reconstruction (`code/audit/reconstruct.py`).
+
+- They resolve or refine the open items A8–A12 and A14 in `data_assumptions.md`. That Phase 3 record is left unchanged.
+- Each was proposed with measurements against the 32 sample answers and **approved by the user** (decision "Q1–Q4: go with recommendations", 2026-10-24).
+- Measurements were made with throwaway scripts, then reproduced by `code/tools/reconstruction_report.py` and the Phase 4 tests.
+
+| # | Source item | Decision | Status | Evidence for it |
+|---|---|---|---|---|
+| P4-1 | A8: bundle files hold inner snapshots dated before their own capture | **State** may use any fact with `observed_at <= audit_at`, even inside a file captured later. **Citations** only use files whose manifest `captured_at <= audit_at`. | Defensible interpretation, approved | The sample answers use such facts (e.g. case_29 verifies `audit_record_3954`, found only in `evidence_02`, captured 2 days after the audit) and never cite a later file (all 75 sample citations are captured on or before `audit_at`). With file-capture-only discovery, 7 sample records are lost. **Tension:** AGENTS.md §6.2 says "use only information available at or before audit_at". We read "available" as "existing at that time". |
+| P4-2 | Coverage completeness (not covered by A-items) | Absence is proven only by (a) an explicit absence observation (404, NOT_FOUND, `rows=0`, no search hit), or (b) a **SQL** snapshot of the **same system, same copy and same kind of data**, taken after the last sighting and on or before `audit_at`, in a file captured on or before `audit_at`. JSON bundles and collections never prove absence. With no qualifying evidence the state is UNKNOWN. | Approved (option D) | Treating any snapshot as complete wrongly made 9 sample records absent (bundle snapshots are partial extracts). Option D gives 82/83 states on the probe and 83/84 in the final comparison, the same as the looser option C, but trusts less. |
+| P4-3 | A9: records known only from the activity log | Not linked. Account deletions by `deletion_worker` within −2 h/+10 min of `reported_at` (and at or before `audit_at`) are listed as **unverified activity candidates**, with a `unique_in_window` flag. They get no state and no citation; the next phase decides. | Approved (option a) | Nearest-event timing was wrong for 17 of 32 samples. Exactly one candidate was right 8 of 8, but that applies to only 22 of 518 evaluation cases. |
+| P4-4 | A10 / A14: untrustworthy times | Observations dated after their own file's capture (A10), and every observation of a screenshot showing a past event dated after its capture (A14: `evidence_09`, `evidence_19`, `evidence_42`), never decide state and are never cited. They are counted in `excluded_anomalous`. | Approved | No sample answer cites these files. |
+| P4-5 | A11: catalog-link conflicts | If any usable observation of a case record carries identifiers that do not belong to the subject (someone else, or nobody known), the relationship is **CONFLICTED** and the state is **CONFLICT**. The evidence-only verdict is kept in `existence` and the competing observations are listed. In the dataset this happens only for `marketing_001` (evaluation case_63). | Approved | Kwame (user_09) per `activity_4008`, versus Soo-jin Park on `evidence_60`. |
+| P4-6 | (new) a lookup that finds nothing | A lookup keyed by the person's identifier that returns no record **does** link that record to the person, but with `link_strength = lookup_only`, the weakest strength. | Interpretation; flagged | Gives 9 correct sample accounts (e.g. case_03 `account_7566`, proven absent by such a lookup in the sample answer) and 1 record absent from the answers (case_17 `account_6523`, a March 404 lookup by Léonie's email, while the official account is `account_4092`). No evidence-based rule separates the two, so the strength is recorded for Phase 5. |
+| P4-7 | (new) boundary | A fact or file exactly at `audit_at` is eligible (inclusive). Times are timezone-aware UTC; comparisons are by instant. | Decided | AGENTS.md "at or before `audit_at`". |
+| — | A12: what kind of data a "legacy contact" support row is | Not decided in Phase 4. The category stays undetermined, and the Phase 5 policy engine decides. | Deferred to Phase 5 | Policy question, not a temporal one. |
+
+## Open for Phase 5
+
+1. **Records with no citable file.** 166 evaluation records (109 security logs, 55 account absences, 2 legal holds), and 6 sample records, have a state decided only by facts inside later-captured files (P4-1). A COMPLETE verdict needs a citation for every check, so Phase 5 must decide how such records affect status.
+2. **Activity candidates (P4-3) and lookup-only links (P4-6):** whether and how to use them.
+3. **UNKNOWN records** (e.g. case_06 `account_006`): the sample answer expects a future absence check; Phase 4 never assumes absence.
