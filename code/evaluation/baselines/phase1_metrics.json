@@ -1,0 +1,29 @@
+{
+  "cases": 32,
+  "status_accuracy": 1.0,
+  "exact_case_accuracy": 1.0,
+  "step_precision": 1.0,
+  "step_recall": 1.0,
+  "step_f1": 1.0,
+  "discovery_precision": 1.0,
+  "discovery_recall": 1.0,
+  "discovery_f1": 1.0,
+  "evidence_accuracy": 1.0,
+  "field_accuracy": 1.0,
+  "field_accuracy_by_field": {
+    "step_no": 1.0,
+    "phase": 1.0,
+    "system_id": 1.0,
+    "resource_id": 1.0,
+    "operation": 1.0,
+    "state": 1.0,
+    "evidence_id": 1.0
+  },
+  "sequence_accuracy": 1.0,
+  "order_accuracy_when_steps_match": 1.0,
+  "status_confusion": {
+    "COMPLETE -> COMPLETE": 10,
+    "INCOMPLETE -> INCOMPLETE": 22
+  },
+  "structural_issues": 0
+}

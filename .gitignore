@@ -1,0 +1,11 @@
+# Private working notes (not part of the submission)
+Private_Docs/
+
+# Secrets and local environment
+.env
+.venv/
+venv/
+
+# Python caches
+__pycache__/
+.pytest_cache/
