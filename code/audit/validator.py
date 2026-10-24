@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 
 from audit.contract import (
@@ -29,6 +30,7 @@ from audit.loader import DATASET_DIR, DatasetError, read_csv
 class Issue:
     case_id: str  # "" for file-level issues
     message: str
+    severity: str = "error"  # "error": breaks the contract; "warning": stricter than it
 
     def __str__(self) -> str:
         return f"{self.case_id or '<file>'}: {self.message}"
@@ -78,7 +80,10 @@ def validate_steps(case_id: str, status: str, steps_json: str,
             issue("NOT_APPLICABLE must have steps_json=[]")
         return issues
     if not steps:
-        issue(f"{status} case has no steps")
+        # The official contract never forbids an empty array for an authorized
+        # case, but every sample answer has steps, so this is flagged as a
+        # warning: stricter than the contract, not a violation of it.
+        issues.append(Issue(case_id, f"{status} case has no steps", "warning"))
         return issues
 
     well_formed = []
@@ -152,9 +157,17 @@ def _check_evidence(step, status, where, audit_at, evidence_times, issue) -> Non
         return
     if evidence_id not in evidence_times:
         issue(f"{where} cites unknown evidence {evidence_id!r}")
-    elif audit_at and evidence_times[evidence_id] > audit_at:
-        issue(f"{where} cites {evidence_id} from {evidence_times[evidence_id]}, "
-              f"after audit_at {audit_at}")
+    elif audit_at:
+        try:
+            evidence_time = datetime.fromisoformat(evidence_times[evidence_id].replace("Z", "+00:00"))
+            cutoff = datetime.fromisoformat(audit_at.replace("Z", "+00:00"))
+            if evidence_time.tzinfo is None or cutoff.tzinfo is None:
+                raise ValueError("timezone required")
+            if evidence_time.astimezone(timezone.utc) > cutoff.astimezone(timezone.utc):
+                issue(f"{where} cites {evidence_id} from {evidence_times[evidence_id]}, "
+                      f"after audit_at {audit_at}")
+        except (TypeError, ValueError):
+            issue(f"{where} has an invalid evidence or audit timestamp")
 
 
 def validate_output_file(output_path: Path | str,

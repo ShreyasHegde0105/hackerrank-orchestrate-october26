@@ -254,3 +254,29 @@ Command: `python code/main.py --requests sample_deletion_requests.csv --out arti
   - Uncommitted: `code/main.py`, `log.txt`, `output.csv`, plus the untracked Phase 4 and Phase 5 files.
   - `artifacts/` is gitignored.
   - **No commits or pushes were made.**
+
+## K. Update after the independent audit (2026-10-25)
+
+The audit findings and their resolutions are in `code/docs/AUDIT_RESPONSE.md`; the
+assumption changes are P4-8/P4-9 in `phase4_assumptions.md`. Effects on this phase:
+
+- **P1 rebuilt.** The single-candidate timing rule became a global request/event
+  matching (window + reported_status↔reported_result + evidence-ownership exclusion,
+  forced assignments only, plus the gold-validated account queue tiebreak). The
+  attributed account joins the case as a `workflow_link` resource; evidence decides
+  its state as usual, and `_upgrade_attributed_account` cites a scoped
+  primary-profile snapshot when the state stays UNKNOWN. 26/26 attributed sample
+  accounts match the official answers.
+- **Analytics records.** The worker's ANONYMIZE_RECORD events are attributed with
+  the same machinery (forced only, no tiebreak — the batches contradict every
+  observed ordering).
+- **Late linkage (P4-8).** Resources named only in files captured after `audit_at`
+  are now discovered (gold case_27); their state still comes only from facts at or
+  before `audit_at`, and citations only from files captured by then.
+- **Stale lookups.** A lookup-only ABSENT account that differs from the case's own
+  attributed account is excluded (gold case_17).
+- **Validator severities.** "COMPLETE/INCOMPLETE case has no steps" is a warning
+  (stricter than the contract); the CLI fails only on contract errors.
+- **Scores.** Samples: status 100%, step F1 93.99% → **96.83%**, field accuracy
+  79.2% → **89.5%**, sequence 53.1% → **62.5%**, evidence accuracy 100%, structural
+  contract errors 0. Full set: 159/349/10, 3,195 steps, 5 warnings, exit 0.

@@ -1,7 +1,7 @@
 """Phase 5 decision rules on hand-built Phase 4 results, and the intent rules."""
 import json
 import random
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -12,6 +12,7 @@ from audit.evidence.model import Coverage, Exposure, TimeBasis
 from audit.intent import classify_request
 from audit.loader import Dataset
 from audit.models import DeletionRequest, DeletionRule
+from audit.models import EvidenceFile
 from audit.reconstruct import ActivityCandidate, CaseReconstruction, ResourceState
 from audit.validator import validate_steps
 
@@ -37,7 +38,7 @@ class StubReconstructor:
     def __init__(self, cases, coverages=(), observations=()):
         self.cases = cases
         self.sql_coverage = {"account_service": list(coverages)}
-        self.result = SimpleNamespace(observations=list(observations))
+        self.result = SimpleNamespace(observations=list(observations), coverages=list(coverages))
 
     def reconstruct(self, request):
         return self.cases[request.case_id]
@@ -47,7 +48,9 @@ def engine(resources, options=None, candidates=(), coverages=(), text="Please de
            observations=()):
     request = DeletionRequest("case_1", "a@x.com", AUDIT, "COMPLETE", AUDIT, AUDIT, text)
     rules = {c: DeletionRule(f"rule_{i:02d}", c, "-", a) for i, (c, a) in enumerate(RULES.items(), 1)}
-    dataset = Dataset(Path("."), [request], {}, [], [], rules, {})
+    files = {c.evidence_id: EvidenceFile(c.evidence_id, f"evidence/{c.evidence_id}.sql", "test",
+                                         c.file_captured_at) for c in coverages}
+    dataset = Dataset(Path("."), [request], {}, [], [], rules, files)
     case = CaseReconstruction("case_1", AUDIT, "RESOLVED", "user_1", tuple(resources),
                               tuple(candidates))
     return DecisionEngine(dataset, StubReconstructor({"case_1": case}, coverages, observations),
@@ -244,8 +247,14 @@ def test_uncategorised_support_category_option():
 
 # --- activity candidates (P1) -------------------------------------------------------------------
 
-def candidate(resource="account_9", unique=True, when=datetime(2026, 9, 10, tzinfo=timezone.utc)):
-    return ActivityCandidate("activity_5", resource, when, "SUCCESS", unique)
+def candidate(resource="account_9", attributed=True, when=datetime(2026, 9, 10, tzinfo=timezone.utc)):
+    return ActivityCandidate("activity_5", resource, when, "SUCCESS", attributed, False, attributed)
+
+
+def workflow_account(resource="account_9", state="UNKNOWN"):
+    citation = "evidence_1" if state != "UNKNOWN" else None
+    return rs(resource, "USER_PROFILE", state, exposure=Exposure.UNKNOWN,
+              link="workflow_link", citation=citation)
 
 
 def cov(evidence_id, observed, resources=()):
@@ -253,47 +262,110 @@ def cov(evidence_id, observed, resources=()):
                     "account_service", "customer_profiles", "primary", frozenset(resources))
 
 
+def scoped_cov(evidence_id, observed, resources=(), *, system="account_service",
+               collection="customer_profiles", replica="primary", captured=None,
+               basis=TimeBasis.SQL_CAPTURE):
+    return Coverage(evidence_id, f"table {collection}", observed, basis,
+                    captured or observed, system, collection, replica, frozenset(resources))
+
+
 def test_candidates_are_diagnostic_unless_enabled():
     decision = decide([], candidates=[candidate()])
     assert decision.steps == [] and any("unverified activity candidates" in d for d in decision.diagnostics)
 
 
-def test_enabled_candidate_is_verified_with_a_later_sql_snapshot():
+def test_workflow_link_disabled_with_candidates_off():
+    decision = decide([workflow_account(state="ABSENT")],
+                      options=PolicyOptions(use_activity_candidates=False))
+    assert decision.steps == []
+    assert any("activity candidates disabled" in d for d in decision.diagnostics)
+
+
+def test_attributed_account_unknown_is_upgraded_by_a_later_snapshot():
     later = cov("evidence_54", datetime(2026, 9, 12, tzinfo=timezone.utc))
     too_early = cov("evidence_40", datetime(2026, 9, 1, tzinfo=timezone.utc), ["account_9"])
-    decision = decide([], options=PolicyOptions(use_activity_candidates=True),
+    decision = decide([workflow_account()], options=PolicyOptions(use_activity_candidates=True),
                       candidates=[candidate()], coverages=[too_early, later])
     assert ops(decision) == [(V, "VERIFY_RECORD_ABSENT", "account_9", "evidence_54")]
-    rationale = next(d for d in decision.diagnostics if "via activity candidate" in d)
-    assert "the only deletion_worker account deletion" in rationale and "evidence_54" in rationale
+    assert any("attributed deletion activity_5" in d for d in decision.diagnostics)
 
 
-def test_candidate_needs_a_snapshot_proving_absence():
+def test_attributed_account_decided_by_evidence_needs_no_upgrade():
+    # A 404 lookup decided ABSENT: the normal path cites it (gold case_25/28).
+    decision = decide([workflow_account(state="ABSENT")],
+                      options=PolicyOptions(use_activity_candidates=True),
+                      candidates=[candidate()])
+    assert ops(decision) == [(V, "VERIFY_RECORD_ABSENT", "account_9", "evidence_1")]
+
+
+def test_unproven_attributed_account_is_a_future_check_only():
     on = PolicyOptions(use_activity_candidates=True)
-    # the activity event alone is never proof: no snapshot -> not used, not even as a future check
-    decision = decide([rs("search_1", "SEARCH_INDEX_ENTRY")], options=on, candidates=[candidate()])
-    assert "account_9" not in [s["resource_id"] for s in decision.steps]
-    assert any("no citable SQL snapshot" in d for d in decision.diagnostics)
-    # a later snapshot that still holds the account vetoes it
-    holds = cov("evidence_41", datetime(2026, 9, 13, tzinfo=timezone.utc), ["account_9"])
-    lacks = cov("evidence_54", datetime(2026, 9, 12, tzinfo=timezone.utc))
-    decision = decide([], options=on, candidates=[candidate()], coverages=[lacks, holds])
-    assert decision.steps == [] and any("still contain it" in d for d in decision.diagnostics)
-    # a snapshot captured after audit_at cannot be cited, so it does not qualify
-    late = Coverage("evidence_70", "table t", datetime(2026, 9, 12, tzinfo=timezone.utc),
-                    TimeBasis.SQL_CAPTURE, datetime(2026, 9, 16, tzinfo=timezone.utc),
-                    "account_service", "customer_profiles", "primary", frozenset())
-    assert decide([], options=on, candidates=[candidate()], coverages=[late]).steps == []
+    # INCOMPLETE case: the future check is emitted with an empty evidence_id (gold case_07/22)
+    violation = rs("search_1", "SEARCH_INDEX_ENTRY")
+    decision = decide([violation, workflow_account()], options=on, candidates=[candidate()])
+    assert (V, "VERIFY_RECORD_ABSENT", "account_9", "") in ops(decision)
+    # COMPLETE case: never emitted without a citation
+    decision = decide([workflow_account()], options=on, candidates=[candidate()])
+    assert decision.steps == []
+    assert any("no citable SQL USER_PROFILE snapshot of the primary copy" in d
+               for d in decision.diagnostics)
 
 
-def test_candidate_rules_ambiguity_and_existing_accounts():
-    on = PolicyOptions(use_activity_candidates=True)
+def test_candidate_not_attributed_is_never_used():
     proof = cov("evidence_54", datetime(2026, 9, 12, tzinfo=timezone.utc))
-    assert decide([], options=on, candidates=[candidate(unique=False), candidate("account_8", False)],
-                  coverages=[proof]).steps == []
-    evidence_account = rs("account_1", "USER_PROFILE", "ABSENT")
-    decision = decide([evidence_account], options=on, candidates=[candidate()], coverages=[proof])
-    assert [s["resource_id"] for s in decision.steps] == ["account_1"]
+    decision = decide([], options=PolicyOptions(use_activity_candidates=True),
+                      candidates=[candidate(attributed=False)], coverages=[proof])
+    assert decision.steps == []
+    assert any("attributed to this case" in d for d in decision.diagnostics)
+
+
+@pytest.mark.parametrize("coverage", [
+    scoped_cov("evidence_54", datetime(2026, 9, 12, tzinfo=timezone.utc),
+               system="search_service", collection="customer_search_documents", replica="read_replica"),
+    scoped_cov("evidence_54", datetime(2026, 9, 12, tzinfo=timezone.utc),
+               collection="customer_search_documents", replica="read_replica"),
+    scoped_cov("evidence_54", datetime(2026, 9, 12, tzinfo=timezone.utc), captured=AUDIT + timedelta(days=1)),
+    scoped_cov("evidence_54", datetime(2026, 9, 9, tzinfo=timezone.utc)),
+    scoped_cov("evidence_54", datetime(2026, 9, 12, tzinfo=timezone.utc), replica="read_replica"),
+])
+def test_wrong_or_ineligible_snapshot_never_upgrades(coverage):
+    decision = decide([workflow_account()], options=PolicyOptions(use_activity_candidates=True),
+                      candidates=[candidate()], coverages=[coverage])
+    assert decision.steps == []  # the future check stays uncited, so a COMPLETE case drops it
+
+
+def test_assurance_bundle_inner_snapshot_qualifies():
+    # gold case_31 cites a JSON assurance bundle scoped to the profile collection
+    proof = scoped_cov("evidence_51", datetime(2026, 9, 12, tzinfo=timezone.utc),
+                       replica=None, basis=TimeBasis.INNER_SNAPSHOT)
+    decision = decide([workflow_account()], options=PolicyOptions(use_activity_candidates=True),
+                      candidates=[candidate()], coverages=[proof])
+    assert ops(decision) == [(V, "VERIFY_RECORD_ABSENT", "account_9", "evidence_51")]
+
+
+def test_copy_still_containing_the_account_blocks_the_upgrade():
+    primary = scoped_cov("evidence_54", datetime(2026, 9, 12, tzinfo=timezone.utc))
+    replica = scoped_cov("evidence_55", datetime(2026, 9, 13, tzinfo=timezone.utc),
+                         ["account_9"], replica="failover_replica")
+    decision = decide([workflow_account()], options=PolicyOptions(use_activity_candidates=True),
+                      candidates=[candidate()], coverages=[primary, replica])
+    assert decision.steps == []
+    assert any("still contain it" in d for d in decision.diagnostics)
+
+
+def test_stale_lookup_of_another_account_is_not_part_of_this_case():
+    # gold case_17: the case workflow deleted account_9; a months-old 404 on a
+    # different account linked only by a lookup is not part of this deletion.
+    stale = rs("account_1", "USER_PROFILE", "ABSENT", link="lookup_only")
+    violation = rs("search_1", "SEARCH_INDEX_ENTRY")
+    decision = decide([violation, stale, workflow_account()],
+                      options=PolicyOptions(use_activity_candidates=True),
+                      candidates=[candidate()])
+    assert "account_1" not in [s["resource_id"] for s in decision.steps]
+    assert any("not part of this case" in d for d in decision.diagnostics)
+    # without an attributed account the lookup-linked absence is still verified
+    decision = decide([stale], options=PolicyOptions(use_activity_candidates=True))
+    assert ops(decision) == [(V, "VERIFY_RECORD_ABSENT", "account_1", "evidence_1")]
 
 
 # --- determinism ------------------------------------------------------------------------------------

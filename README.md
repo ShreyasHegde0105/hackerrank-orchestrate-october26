@@ -27,7 +27,7 @@ python code/main.py
 ```
 
 - **Reads:** `dataset/`.
-- **Writes:** `output.csv` at the repository root (518 rows, sorted by `case_id`), in about 4 s.
+- **Writes:** `output.csv` at the repository root (518 rows, sorted by `case_id`), in about 5 s.
 - **Validates:** the file against the output contract right after writing it.
 - **Deterministic:** re-runs write a byte-identical file.
 - **Options:**
@@ -49,7 +49,7 @@ python -m pytest code/tests
 |---|---|---|
 | 1 | Output contract, validator, evaluator | `code/audit/contract.py`, `validator.py`, `code/evaluation/evaluate.py` |
 | 2 | Loads the dataset; resolves each request email to a person with all current and historical identifiers (never by name) | `code/audit/loader.py`, `identity.py` |
-| 3 | Turns all 94 evidence files (SQL, JSON, five log layouts, text, PDF, screenshots) into observations with provenance | `code/audit/evidence/` |
+| 3 | Turns all 94 evidence files (SQL, JSON, six log layouts, text, PDF, screenshots) into observations with provenance | `code/audit/evidence/` |
 | 4 | Reconstructs each record per copy at the case's `audit_at`; absence only from qualifying evidence; citations only from files captured by `audit_at` | `code/audit/reconstruct.py` |
 | 5 | Decides deletion intent, applies `deletion_rules.csv`, and builds ordered findings, remediation and verification | `code/audit/intent.py`, `decide.py`, `code/main.py` |
 

@@ -17,7 +17,7 @@ All figures below come from commands actually executed on 2026-10-24, on top of 
 - Extractors for every format in the dataset:
   - SQL: three shapes
   - JSON: four families
-  - logs: five layouts
+  - logs: six layouts (the sixth, RFC 5424 syslog with a positional service and trace ID, was added after the independent audit: see AUDIT-S1 in AUDIT_RESPONSE.md)
   - text handovers
   - PDFs
   - screenshots

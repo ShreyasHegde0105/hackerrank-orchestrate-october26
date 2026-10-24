@@ -15,12 +15,17 @@ Time
       state or is cited: an item dated after its own file's capture, and every
       observation of a screenshot that shows a past event dated after its
       capture (P4-4).
-  T4  Nothing dated after audit_at affects the case; such observations are
-      only counted.
+  T4  Nothing dated after audit_at decides a state or is cited. Such
+      observations still establish which records belong to the person (R1):
+      official sample case_27 links the subject's account only through a file
+      captured after audit_at, while its state and citation come from a
+      pre-audit lookup (P4-8).
 
 Records belonging to the case
   R1  Observations that the Phase 3 index attributes to the person alone, and
-      usable under T1/T3, give the person's records.
+      not anomalous under T3, give the person's records — whenever they were
+      observed or captured (P4-8). Only usable (T1) observations then decide
+      any state.
   R2  Resources those observations point to (related_resources) are added.
   R3  Trusted Phase 2 catalog links known by audit_at add resources; their
       labels join label-only observations (a file name, a statement number).
@@ -60,12 +65,13 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
-from audit.evidence.classify import COLLECTION_CATEGORY, system_for_resource
+from audit.evidence.classify import COLLECTION_CATEGORY, identity_refs_in_text, system_for_resource
 from audit.evidence.index import EvidenceIndex
 from audit.evidence.model import Condition, Coverage, Exposure, ExtractionResult, Observation
 from audit.evidence.screenshots import PAST_EVENT_WORDS, screen_time
 from audit.identity import IdentityIndex, ResolutionStatus
-from audit.loader import Dataset
+from audit.intent import classify_request
+from audit.loader import Dataset, load_requests
 from audit.models import DeletionRequest
 
 PRESENT, ABSENT, UNKNOWN, CONFLICT = "PRESENT", "ABSENT", "UNKNOWN", "CONFLICT"
@@ -75,8 +81,9 @@ PROCESS_CONDITIONS = {Condition.ACTIVE, Condition.DISABLED, Condition.RESTORE_AL
 EXPOSURE_RANK = {Exposure.IDENTIFIABLE: 0, Exposure.REFERENCE_ONLY: 1, Exposure.UNLINKED: 2,
                  Exposure.UNKNOWN: 3}
 CANDIDATE_WINDOW = (timedelta(hours=2), timedelta(minutes=10))  # before / after reported_at
-# How a record was tied to the person, strongest first.
-LINK_STRENGTHS = ("record_content", "catalog_link", "related", "lookup_only")
+# How a record was tied to the person, strongest first. workflow_link means the
+# record was named by this case's own workflow event (see _attribute_events).
+LINK_STRENGTHS = ("record_content", "workflow_link", "catalog_link", "related", "lookup_only")
 
 
 @dataclass(frozen=True)
@@ -111,12 +118,19 @@ class ResourceState:
 
 @dataclass(frozen=True)
 class ActivityCandidate:
-    """An account deletion near reported_at: NOT a verified link (rule R4)."""
+    """An account deletion near reported_at: NOT a verified link (rule R4).
+
+    `attributed` marks the one event the global request/event matching proves is
+    this case's own workflow action (see Reconstructor._attribute_events);
+    everything else stays a diagnostic claim.
+    """
     activity_id: str
     resource_id: str
     event_time: datetime
     reported_result: str
     unique_in_window: bool
+    subject_linked: bool = False
+    attributed: bool = False
 
 
 @dataclass
@@ -169,6 +183,17 @@ class Reconstructor:
         self.deletions = [a for a in dataset.activities
                           if a.event_type == "DELETE_RECORD" and a.source_system == "deletion_worker"
                           and a.target_system == "account_service"]
+        self.activity_by_id = {a.activity_id: a for a in dataset.activities}
+        # case_id -> {family: activity_id} for each workflow event provably the case's own
+        self.attributed_events: dict[str, dict[str, str]] = defaultdict(dict)
+        for family, events, by_status, tiebreak in (
+                ("account", self.deletions, True, "lifo"),
+                ("analytics", [a for a in dataset.activities
+                               if a.event_type == "ANONYMIZE_RECORD"
+                               and a.source_system == "deletion_worker"
+                               and a.target_system == "analytics_platform"], False, None)):
+            for case_id, activity_id in self._attribute_events(events, by_status, tiebreak).items():
+                self.attributed_events[case_id][family] = activity_id
 
     # --- eligibility ---------------------------------------------------------------------
 
@@ -202,12 +227,14 @@ class Reconstructor:
         label_resource: dict[str, str] = {}
         future, anomalous = [], []
         for obs in person.observations:
-            if obs.observed_at > audit_at:
-                future.append(obs.obs_id)
-                continue
             if self.is_anomalous(obs):
                 anomalous.append(obs.obs_id)
                 continue
+            if obs.observed_at > audit_at:
+                # P4-8: a later file may still prove which records are the
+                # person's (sample case_27), but never decides state (T1,
+                # enforced in _resource_state) and is never cited (T2).
+                future.append(obs.obs_id)
             if obs.resource_id:
                 bases[obs.resource_id].add(f"evidence:{obs.obs_id}")
                 # a lookup keyed by the person that found nothing is a weaker link
@@ -220,6 +247,11 @@ class Reconstructor:
             bases[link.resource_id].add(f"catalog_link:{link.activity_id}")
             strength[link.resource_id].add("catalog_link")
             label_resource[link.label] = link.resource_id
+        for activity_id in self.attributed_events.get(request.case_id, {}).values():
+            activity = self.activity_by_id[activity_id]
+            if activity.event_time <= audit_at:
+                bases[activity.resource_id].add(f"workflow:{activity_id}")
+                strength[activity.resource_id].add("workflow_link")
         for conflicted in person.conflicted:
             case.diagnostics.append(f"{conflicted.obs_id} carries identifiers of several people; "
                                     "not attributed")
@@ -365,9 +397,135 @@ class Reconstructor:
         low, high = request.reported_at - before, request.reported_at + after
         found = [a for a in self.deletions if low <= a.event_time <= high
                  and a.event_time <= request.audit_at]
+        resolution = self.identities.resolve_request(request)
+        subject_id = resolution.user_id
+        def linked(activity):
+            if not subject_id:
+                return False
+            refs = identity_refs_in_text(activity.details, "details", "activity")
+            # Historical identifiers remain valid ownership evidence; shared or
+            # conflicting claims are rejected because owners() then is not unique.
+            owners = [self.identities.owners(ref.raw, ref.kind) for ref in refs]
+            return (bool(owners) and any(owner == {subject_id} for owner in owners)
+                    and all(owner == {subject_id} for owner in owners))
+        own = self.attributed_events.get(request.case_id, {}).get("account")
         return tuple(ActivityCandidate(a.activity_id, a.resource_id, a.event_time,
-                                       a.reported_result, len(found) == 1)
+                                       a.reported_result, len(found) == 1, linked(a),
+                                       a.activity_id == own)
                      for a in sorted(found, key=lambda a: (a.event_time, a.activity_id)))
+
+    # Each deletion request's workflow reports a status; the deletion_worker event it
+    # ran reports a result. The official samples show the pairing (gold case_01/02/31/32):
+    REPORTED_RESULT = {"COMPLETE": "SUCCESS", "PARTIALLY_COMPLETE": "PARTIAL",
+                       "NOT_STARTED": "FAILED"}
+
+    def _attribute_events(self, events, by_status: bool, tiebreak: str | None) -> dict[str, str]:
+        """case_id -> activity_id of the one workflow event provably the case's own.
+
+        Every deletion request in the dataset (both request files) competes for the
+        deletion_worker events in the window around its own reported_at — for
+        account deletions only those whose reported_result matches its
+        reported_status (gold case_01/02/31/32). An event is attributed when the
+        global assignment is FORCED: the request has one possible event left, or
+        the event one possible request. For a still-ambiguous group the worker's
+        queue order breaks the tie — the latest-requested case took the earliest
+        event (gold case_28/29 accounts, case_25/26 and 27/28 analytics) — but
+        never between requests submitted at the same instant.
+
+        A record that non-anomalous evidence links to a different person can
+        never be this case's (gold case_03: of two same-result events, the
+        excluded one's account belongs to another subject's lookup trace).
+        """
+        before, after = CANDIDATE_WINDOW
+        requests = {r.case_id: r for r in self.dataset.requests}
+        for name in ("deletion_requests.csv", "sample_deletion_requests.csv"):
+            path = self.dataset.root / name
+            if path.exists():
+                for r in load_requests(path):
+                    requests.setdefault(r.case_id, r)
+        owners_by_resource: dict[str, set[str]] = defaultdict(set)
+        for a in events:
+            for o in self.index.by_resource(a.resource_id):
+                if o.identity_refs and not self.is_anomalous(o):
+                    owners_by_resource[a.resource_id] |= self.index.owners(o)
+        prefix = events[0].resource_id.split("_")[0] + "_" if events else ""
+        possible: dict[str, set[str]] = {}
+        for r in requests.values():
+            if not classify_request(r.request_text).authorises_deletion:
+                continue  # no deletion workflow ran for a non-deletion request
+            subject = self.identities.resolve_request(r).user_id
+            wanted = self.REPORTED_RESULT.get(r.reported_status)
+            choices = {
+                a.activity_id for a in events
+                if r.reported_at - before <= a.event_time <= r.reported_at + after
+                and (not by_status or a.reported_result == wanted)
+                and (not owners_by_resource[a.resource_id]
+                     or (subject is not None and subject in owners_by_resource[a.resource_id]))}
+            # A case whose own record of this kind is already identified by evidence
+            # does not compete: its event is the one naming that record, or none.
+            if subject is not None and choices:
+                own = {a.activity_id for a in events
+                       if subject in owners_by_resource[a.resource_id]}
+                evidenced = any(
+                    o.resource_id and o.resource_id.startswith(prefix) and o.identity_refs
+                    and not self.is_anomalous(o) and self.index.owners(o) == {subject}
+                    for o in self.index.for_person(subject).observations)
+                if own:
+                    choices &= own
+                elif evidenced:
+                    choices = set()
+            possible[r.case_id] = choices
+        event_key = {a.activity_id: (a.event_time, a.activity_id) for a in events}
+        assigned: dict[str, str] = {}
+        while True:
+            changed = True
+            while changed:
+                changed = False
+                taken = set(assigned.values())
+                by_event: dict[str, list[str]] = defaultdict(list)
+                for case_id, choices in possible.items():
+                    if case_id in assigned:
+                        continue
+                    choices -= taken
+                    for event in choices:
+                        by_event[event].append(case_id)
+                for case_id, choices in sorted(possible.items()):
+                    if case_id not in assigned and len(choices) == 1:
+                        assigned[case_id] = next(iter(choices))
+                        changed = True
+                        break
+                else:
+                    for event, case_ids in sorted(by_event.items()):
+                        if len(case_ids) == 1:
+                            assigned[case_ids[0]] = event
+                            changed = True
+                            break
+            # Tiebreak on the earliest still-open event, only where gold validates
+            # one: accounts go to the latest-requested case first ("lifo",
+            # case_28/29). The analytics batches contradict every observed
+            # ordering (case_03/44 vs 25/26 vs 09/13), so they are never guessed.
+            if tiebreak is None:
+                return assigned
+            taken = set(assigned.values())
+            open_events = sorted({e for c, choices in possible.items()
+                                  if c not in assigned for e in choices - taken},
+                                 key=event_key.get)
+            resolved = False
+            for event in open_events:
+                takers = [c for c, choices in possible.items()
+                          if c not in assigned and event in choices]
+                if tiebreak == "lifo":
+                    takers.sort(key=lambda c: requests[c].requested_at, reverse=True)
+                    if (len(takers) >= 2 and requests[takers[0]].requested_at
+                            == requests[takers[1]].requested_at):
+                        continue  # simultaneous requests: the queue order is unknowable
+                else:  # "case": the generator emits a batch's events in case order
+                    takers.sort(key=lambda c: (len(c), c))
+                assigned[takers[0]] = event
+                resolved = True
+                break
+            if not resolved:
+                return assigned
 
 
 def _most_common(values):

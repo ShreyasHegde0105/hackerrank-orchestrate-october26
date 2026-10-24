@@ -1,10 +1,11 @@
-"""Log extraction for the five layouts found in the dataset.
+"""Log extraction for the six layouts found in the dataset.
 
     1. key=value                 2026-..Z level=INFO service=x trace_id=t event=e k=v
     2. key=value inside message  2026-..Z requestId=t level=.. function=x message="k=\"v\" .."
     3. pipe header               2026-..Z | LEVEL | service | trace | event | k="v" ..
     4. bracket header            2026-..Z [LEVEL] [service] [trace] event: k="v" ..
     5. JSON object               2026-..Z {"severity": .., "service": .., "event": .., ..}
+    6. syslog (RFC 5424) header  2026-..Z <15>1 host service trace - - level=DEBUG k="v" ..
 
 Every layout is normalised to one dict with `service`, `trace_id` and `event`.
 A lookup usually logs the identifier it searched for on a *_started line and
@@ -38,6 +39,10 @@ _PIPE = re.compile(r"^(?P<ts>\S+) \| (?P<level>\w+) \| (?P<service>\S+) \| (?P<t
                    r"(?P<event>\w+) \| (?P<rest>.*)$")
 _BRACKET = re.compile(r"^(?P<ts>\S+) \[(?P<level>\w+)\] \[(?P<service>[^\]]+)\] "
                       r"\[(?P<trace>[^\]]+)\] (?P<event>\w+): (?P<rest>.*)$")
+# RFC 5424 syslog: PRI+version, host, app-name (the service), procid (the trace),
+# msgid and structured-data (both "-" in the dataset), then key=value pairs.
+_SYSLOG = re.compile(r"^(?P<ts>\S+) <\d+>\d+ (?P<host>\S+) (?P<service>\S+) "
+                     r"(?P<trace>\S+) \S+ \S+ (?P<rest>.*)$")
 _MESSAGE = re.compile(r'message="(?P<inner>(?:[^"\\]|\\.)*)"')
 
 # Events that describe infrastructure, not customer records.
@@ -86,6 +91,15 @@ def parse_log_line(line: str) -> tuple[str, dict]:
         fields.update(level=header.group("level"), service=header.group("service"),
                       trace_id=header.group("trace"), event=header.group("event"))
         return ("pipe" if header.re is _PIPE else "bracket"), fields | {"_ts": header.group("ts")}
+    syslog = _SYSLOG.match(line)
+    if syslog:
+        fields = _pairs(syslog.group("rest"))
+        fields.update(service=syslog.group("service"))
+        if syslog.group("trace") != "-":
+            fields["trace_id"] = syslog.group("trace")
+        if "event" not in fields:
+            raise ValueError("no event field")
+        return "syslog", fields | {"_ts": syslog.group("ts")}
     timestamp, _, body = line.partition(" ")
     if body.startswith("{"):
         try:

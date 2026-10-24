@@ -1,6 +1,6 @@
 # Usage report: final full-dataset run
 
-**Run:** `python code/main.py`, 2026-10-24, producing `output.csv` (518 rows, SHA-256 `5771d729e9b80d012baa082befefc2745fe8044403a33063e790826bc25e44a0`). Wall time was about 3.6 s on one machine.
+**Run:** `python code/main.py`, 2026-10-25, producing `output.csv` (518 rows, SHA-256 `ac85935e3dd2c0bf2a34814c49c964bce819160edbfcc0da30e9ea32902efb86`). Wall time was about 5 s on one machine.
 
 ## Model usage during the run
 

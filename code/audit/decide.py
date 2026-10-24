@@ -42,11 +42,11 @@ Policy options (P1-P3) cover what the specification does not settle; see PolicyO
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from audit.contract import OPERATION_STATE, step_sort_key
-from audit.evidence.classify import classify_category
-from audit.evidence.model import Exposure
+from audit.evidence.classify import COLLECTION_CATEGORY, classify_category
+from audit.evidence.model import Exposure, TimeBasis
 from audit.intent import IntentVerdict, classify_request
 from audit.loader import Dataset, format_timestamp
 from audit.models import DeletionRequest
@@ -125,8 +125,18 @@ class DecisionEngine:
             return None, f"CONFLICT: {r.reason}"
         if r.link_strength == "catalog_link":
             return None, "linked only by a catalog link (an activity-log claim, not evidence)"
+        if r.link_strength == "workflow_link" and not self.options.use_activity_candidates:
+            return None, "linked only by this case's workflow event (activity candidates disabled)"
         if r.link_strength == "lookup_only" and r.state != ABSENT:
             return None, "lookup-only link may only verify an absent record"
+        if (r.link_strength == "lookup_only" and r.state == ABSENT
+                and r.system_id == "account_service" and self.options.use_activity_candidates
+                and any(a.attributed and a.resource_id != r.resource_id
+                        for a in case.activity_candidates)):
+            # Gold case_17: a stale 404 on a different account than the one this
+            # case's own workflow deleted is not part of this deletion.
+            return None, ("lookup of a different account than this case's own workflow "
+                          "deletion; not part of this case")
         category = r.data_category
         if category is None:
             # no usable observation stated it: fall back to the record ID (Phase 3's own
@@ -231,42 +241,74 @@ class DecisionEngine:
                     ends.add(value)
         return max(ends) if ends else None
 
-    def _candidate_decision(self, case: CaseReconstruction) -> tuple[RecordDecision | None, str]:
-        """P1: the single account deletion near reported_at, verified absent."""
-        unique = [a for a in case.activity_candidates if a.unique_in_window]
-        if not unique:
-            return None, ""
-        candidate: ActivityCandidate = unique[0]
-        if case.resource(candidate.resource_id) is not None:
-            return None, ""  # already decided from evidence
-        if any(r.data_category == "USER_PROFILE" and r.link_strength != "catalog_link"
-               for r in case.resources):
-            return None, (f"activity candidate {candidate.resource_id} not used: the case already "
-                          "has an account from evidence")
-        # The activity event is a claim: absence must be shown by a citable SQL snapshot of
-        # the account service taken after the event, and no such snapshot may still hold it.
-        after_event = [c for c in self.reconstructor.sql_coverage.get("account_service", ())
-                       if candidate.event_time <= c.observed_at <= case.audit_at
-                       and c.file_captured_at <= case.audit_at]
-        holding = sorted({c.evidence_id for c in after_event if candidate.resource_id in c.resource_ids})
+    def _upgrade_attributed_account(self, case: CaseReconstruction, decision: "CaseDecision") -> None:
+        """P1: upgrade the attributed account's future absence check to a cited one.
+
+        The official samples endorse the workflow link (no activity details carry a
+        subject identifier, yet gold answers verify these accounts): the deletion
+        event forced onto this case by Reconstructor._attribute_events is its own
+        workflow's action, so the account is a workflow_link resource. Evidence
+        decides its state as usual. When the state stays UNKNOWN, the record keeps
+        a future VERIFY_RECORD_ABSENT (gold case_07/22, emitted only for an
+        INCOMPLETE case) — unless a citable SQL snapshot of the primary
+        USER_PROFILE copy taken after the event proves the absence, which gives the
+        verification its citation (gold case_01/02 cite exactly one such snapshot).
+        """
+        attributed = next((a for a in case.activity_candidates if a.attributed), None)
+        if attributed is None:
+            if case.activity_candidates:
+                decision.diagnostics.append(
+                    "activity candidates not used: no deletion event in the window can be "
+                    "attributed to this case's workflow (ambiguous or status-mismatched)")
+            return
+        state = case.resource(attributed.resource_id)
+        if state is None or state.state != UNKNOWN:
+            return  # evidence decided the account's state; the normal path handled it
+        made = next((d for d in decision.decisions
+                     if d.resource_id == attributed.resource_id and d.future_check_only), None)
+        if made is None:
+            return
+        # The event is a claim (AUDIT-001/002): absence must be shown by a citable
+        # snapshot scoped to the account service's USER_PROFILE collection — a SQL
+        # capture or an assurance bundle's inner snapshot (gold case_31 cites one) —
+        # taken after the event, and no later qualifying copy snapshot may still
+        # hold the account.
+        after_event = [c for c in self.reconstructor.result.coverages
+                       if c.system_id == "account_service"
+                       and COLLECTION_CATEGORY.get(c.collection) == "USER_PROFILE"
+                       and c.time_basis in (TimeBasis.SQL_CAPTURE, TimeBasis.INNER_SNAPSHOT)
+                       and attributed.event_time <= c.observed_at <= case.audit_at
+                       and c.observed_at <= c.file_captured_at
+                       and c.file_captured_at <= case.audit_at
+                       and self.dataset.evidence_files.get(c.evidence_id) is not None
+                       and self.dataset.evidence_files[c.evidence_id].captured_at <= case.audit_at]
+        by_copy = {}
+        for coverage in after_event:
+            copy = coverage.replica or "primary"
+            current = by_copy.get(copy)
+            if current is None or (coverage.observed_at, coverage.evidence_id) > (
+                    current.observed_at, current.evidence_id):
+                by_copy[copy] = coverage
+        holding = sorted(c.evidence_id for c in by_copy.values()
+                         if attributed.resource_id in c.resource_ids)
         if holding:
-            return None, (f"activity candidate {candidate.resource_id} not used: SQL snapshots "
-                          f"{holding} taken after the deletion event still contain it")
-        proofs = [c for c in after_event if candidate.resource_id not in c.resource_ids]
-        if not proofs:
-            return None, (f"activity candidate {candidate.resource_id} not used: no citable SQL "
-                          "snapshot taken after the deletion event shows it absent")
-        proof = max(proofs, key=lambda c: (c.observed_at, c.evidence_id))
-        rule = self.actions.get("USER_PROFILE")
-        rationale = (f"{rule.rule_id if rule else 'USER_PROFILE'} via activity candidate "
-                     f"{candidate.activity_id}: the only deletion_worker account deletion within "
-                     f"-2h/+10min of reported_at ({candidate.resource_id} at "
-                     f"{format_timestamp(candidate.event_time)}, reported {candidate.reported_result}); "
-                     f"no account known from evidence; absent from SQL snapshot "
-                     f"{proof.evidence_id} ({proof.locator}, {format_timestamp(proof.observed_at)})")
-        return RecordDecision(candidate.resource_id, "account_service", rationale,
-                              verification="VERIFY_RECORD_ABSENT",
-                              verification_evidence=proof.evidence_id), ""
+            decision.diagnostics.append(
+                f"{attributed.resource_id}: absence not verified; latest qualifying copy "
+                f"snapshots {holding} still contain it")
+            return
+        if "primary" not in by_copy:
+            decision.diagnostics.append(
+                f"{attributed.resource_id}: future check only; no citable SQL USER_PROFILE "
+                "snapshot of the primary copy taken after the attributed deletion "
+                f"{attributed.activity_id}")
+            return
+        proof = by_copy["primary"]
+        decision.decisions[decision.decisions.index(made)] = replace(
+            made, verification_evidence=proof.evidence_id, future_check_only=False)
+        decision.diagnostics.append(
+            f"{attributed.resource_id}: absent from SQL snapshot {proof.evidence_id} "
+            f"({proof.locator}, {format_timestamp(proof.observed_at)}) taken after the "
+            f"attributed deletion {attributed.activity_id}")
 
     # --- one case --------------------------------------------------------------------------
 
@@ -286,12 +328,7 @@ class DecisionEngine:
             else:
                 decision.decisions.append(made)
         if self.options.use_activity_candidates:
-            made, why = self._candidate_decision(case)
-            if made is not None:
-                decision.decisions.append(made)
-                decision.diagnostics.append(f"{made.resource_id}: {made.rule}")
-            elif why:
-                decision.diagnostics.append(why)
+            self._upgrade_attributed_account(case, decision)
         elif case.activity_candidates:
             decision.diagnostics.append(
                 "unverified activity candidates (not used): "

@@ -18,6 +18,9 @@ LAYOUTS = {
     "json": '2026-09-10T08:56:17Z {"severity":"DEBUG","service":"account_service",'
             '"trace_id":"tr-5","event":"profile_lookup_completed","resource_id":"account_9",'
             '"rows":"1"}',
+    "syslog": '2026-03-25T08:53:25Z <15>1 node-8 account_service tr-6 - - level=DEBUG '
+              'instance="account-5" resource_id="account_10" event="profile_lookup_completed" '
+              'rows="1" http_status="200"',
 }
 
 
@@ -60,6 +63,28 @@ def test_identifier_on_started_line_joins_result_by_trace():
     (ref,) = obs.identity_refs
     assert (ref.kind, ref.value, ref.field, ref.basis) == (
         IdentifierKind.EMAIL, "charlotte.w@outlook.com", "lookup_key", "trace:rb-1")
+
+
+def test_syslog_trace_joins_identity_across_infrastructure_lines():
+    # evidence_39 regression: the trace ID is positional in the RFC 5424 header, and
+    # noise lines (retries, pools) sit between the _started and _completed lines.
+    observations, issues, report = run([
+        '2026-03-25T08:53:16Z <15>1 node-8 account_service tr-0854521 - - level=DEBUG '
+        'event="profile_lookup_started" lookup_key="s.kim14@yahoo.com" attempt="1"',
+        '2026-03-25T08:53:21Z <15>1 node-8 account_service tr-0854521 - - level=DEBUG '
+        'event="connection_acquired" pool="account_service_replica" wait_ms="53"',
+        '2026-03-25T08:53:23Z <12>1 node-8 account_service tr-0854521 - - level=WARN '
+        'event="dependency_retry" dependency="account_service_store" attempt="1"',
+        '2026-03-25T08:53:25Z <15>1 node-8 account_service tr-0854521 - - level=DEBUG '
+        'resource_id="account_4921" event="profile_lookup_completed" rows="1" http_status="200"',
+    ])
+    assert issues == [] and report.status is FileStatus.PARSED
+    (obs,) = observations
+    assert obs.resource_id == "account_4921" and obs.condition is Condition.PRESENT
+    (ref,) = obs.identity_refs
+    assert (ref.kind, ref.value, ref.basis) == (
+        IdentifierKind.EMAIL, "s.kim14@yahoo.com", "trace:tr-0854521")
+    assert report.details["layouts"] == ["syslog"]
 
 
 def test_trace_mixing_two_identifiers_is_not_joined():

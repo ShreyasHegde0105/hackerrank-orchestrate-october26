@@ -117,6 +117,17 @@ def test_evidence_after_audit_and_unknown_evidence():
                                         audit_at="2026-09-03T00:00:00Z", evidence_times={})
 
 
+def test_evidence_timestamp_offsets_are_compared_as_instants():
+    before = _check("INCOMPLETE", GOOD_INCOMPLETE,
+                    audit_at="2026-09-03T00:00:00Z",
+                    evidence_times={"evidence_54": "2026-09-03T01:00:00+02:00"})
+    after = _check("INCOMPLETE", GOOD_INCOMPLETE,
+                   audit_at="2026-09-03T00:00:00Z",
+                   evidence_times={"evidence_54": "2026-09-02T23:30:00-01:00"})
+    assert "after audit_at" not in before
+    assert "after audit_at" in after
+
+
 def test_file_level_checks(tmp_path, gold_rows):
     rows = list(gold_rows)
     swapped = write_output(tmp_path / "a.csv", [rows[1], rows[0]] + rows[2:])

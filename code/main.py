@@ -28,7 +28,7 @@ from audit.contract import OUTPUT_COLUMNS, case_sort_key  # noqa: E402
 from audit.decide import APPROVED, DecisionEngine, PolicyOptions  # noqa: E402
 from audit.evidence.extract import extract_evidence  # noqa: E402
 from audit.identity import IdentityIndex  # noqa: E402
-from audit.loader import DATASET_DIR, REPO_ROOT, load_dataset  # noqa: E402
+from audit.loader import DATASET_DIR, REPO_ROOT, DatasetError, load_dataset  # noqa: E402
 from audit.reconstruct import Reconstructor  # noqa: E402
 from audit.validator import validate_output_file  # noqa: E402
 from llm.vision import ScreenshotTranscriber  # noqa: E402
@@ -76,7 +76,11 @@ def main(argv=None) -> int:
     options = PolicyOptions(args.use_activity_candidates, args.empty_case_status,
                             None if str(category).lower() == "none" else category)
 
-    result, decisions = run(args.requests, options)
+    try:
+        result, decisions = run(args.requests, options)
+    except (DatasetError, OSError) as exc:
+        print(f"input or pipeline error: {exc}", file=sys.stderr)
+        return 1
     not_extracted = [f for f, r in result.files.items() if r.status.value in ("failed", "pending_ai")]
     write_output(decisions, args.out)
     issues = validate_output_file(args.out, DATASET_DIR / args.requests)
@@ -86,8 +90,11 @@ def main(argv=None) -> int:
         counts[d.status] = counts.get(d.status, 0) + 1
     print(f"wrote {len(decisions)} rows to {args.out}: "
           + ", ".join(f"{k}={v}" for k, v in sorted(counts.items())))
-    print(f"evidence files not extracted: {len(not_extracted)}; contract issues: {len(issues)}")
-    for issue in issues[:20]:
+    errors = [i for i in issues if i.severity == "error"]
+    warnings = [i for i in issues if i.severity != "error"]
+    print(f"evidence files not extracted: {len(not_extracted)}; contract issues: {len(errors)}"
+          + (f"; warnings (stricter than the contract): {len(warnings)}" if warnings else ""))
+    for issue in (errors + warnings)[:20]:
         print(f"  {issue}")
     if args.diagnostics:
         args.diagnostics.parent.mkdir(parents=True, exist_ok=True)
@@ -95,7 +102,9 @@ def main(argv=None) -> int:
             {d.case_id: {"status": d.status, "intent": d.intent.rule,
                          "rules": [x.rule for x in d.decisions], "diagnostics": d.diagnostics}
              for d in decisions}, indent=1, ensure_ascii=False), encoding="utf-8")
-    return 0 if not not_extracted else 1
+    # Warnings (checks stricter than the official contract, e.g. an authorized
+    # case with no evidence-backed step) are reported but do not fail the run.
+    return 0 if not not_extracted and not errors else 1
 
 
 if __name__ == "__main__":

@@ -35,10 +35,10 @@ def test_every_file_is_processed_and_only_screenshots_wait_for_ai(extracted):
     assert sum(r.observations for r in result.files.values()) == len(result.observations)
 
 
-def test_all_five_log_layouts_are_seen_and_no_line_is_unparsed(extracted):
+def test_all_six_log_layouts_are_seen_and_no_line_is_unparsed(extracted):
     _, result, _ = extracted
     layouts = {l for r in result.files.values() if r.kind == "log" for l in r.details["layouts"]}
-    assert layouts == {"key_value", "nested_message", "pipe", "bracket", "json"}
+    assert layouts == {"key_value", "nested_message", "pipe", "bracket", "json", "syslog"}
     assert not [i for i in result.issues if "unparsed log line" in i.message]
     assert not [i for i in result.issues if "trace mixes" in i.message]
 

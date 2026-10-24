@@ -106,10 +106,29 @@ def test_sightings_at_or_before_audit_are_used(observed, expected):
     assert case(rc).resource("search_1").state == expected
 
 
-def test_sightings_after_audit_never_count():
+def test_sightings_after_audit_link_but_never_decide_state():
+    # P4-8 (sample case_27): a later file proves the record is the person's,
+    # but its fact decides nothing: no usable sighting, so the state is UNKNOWN.
     rc = build([obs("evidence_1", "search_1", AUDIT + timedelta(seconds=1))])
     result = case(rc)
-    assert result.resources == () and result.excluded_future == ("evidence_1#records[0]",)
+    state = result.resource("search_1")
+    assert state.state == UNKNOWN and state.citation is None
+    assert state.supporting == () and state.link_strength == "record_content"
+    assert result.excluded_future == ("evidence_1#records[0]",)
+
+
+def test_late_link_with_earlier_absence_lookup_gives_cited_absent_state():
+    # The gold case_27 shape: the only identity link sits in a file captured
+    # after audit_at, while a pre-audit 404 lookup (no identifiers) decides
+    # ABSENT and is the citation.
+    lookup = obs("evidence_1", "account_1", t(10), Condition.ABSENT, refs=())
+    late = obs("evidence_2", "account_1", AUDIT + timedelta(days=2),
+               captured=AUDIT + timedelta(days=2))
+    rc = build([lookup, late])
+    state = case(rc).resource("account_1")
+    assert state.state == ABSENT and state.citation == "evidence_1"
+    assert state.link_strength == "record_content"
+    assert "evidence_2#records[0]" not in state.supporting
 
 
 def test_a_deletion_after_audit_does_not_make_the_record_absent():
@@ -123,7 +142,7 @@ def test_equivalent_instants_in_other_offsets_compare_by_instant():
     at_audit = datetime(2026, 9, 15, 14, 0, tzinfo=plus_two)       # == 12:00 UTC
     after = datetime(2026, 9, 15, 14, 0, 1, tzinfo=plus_two)       # 12:00:01 UTC
     assert case(build([obs("evidence_1", "search_1", at_audit)])).resource("search_1").state == PRESENT
-    assert case(build([obs("evidence_1", "search_1", after)])).resources == ()
+    assert case(build([obs("evidence_1", "search_1", after)])).resource("search_1").state == UNKNOWN
 
 
 def test_fact_inside_a_later_file_decides_state_but_is_not_cited():
@@ -217,12 +236,42 @@ def test_link_strengths():
                          "account_2": "related"}
 
 
-def test_activity_deletions_are_unverified_candidates_only():
+def test_attributed_deletion_discovers_the_account_without_state_or_citation():
     deletion = Activity("activity_7", t(11) - timedelta(minutes=30), "DELETE_RECORD",
                         "deletion_worker", "account_service", "account_9", "SUCCESS", "done")
     result = case(build([obs("evidence_1", "search_1", t(14))], activities=[deletion]))
-    assert [(a.resource_id, a.unique_in_window) for a in result.activity_candidates] == [("account_9", True)]
-    assert result.resource("account_9") is None  # no state, no citation
+    assert [(a.resource_id, a.unique_in_window, a.attributed)
+            for a in result.activity_candidates] == [("account_9", True, True)]
+    account = result.resource("account_9")  # the workflow event names the record...
+    assert account.link_strength == "workflow_link"
+    assert account.state == UNKNOWN and account.citation is None  # ...but proves nothing
+
+
+@pytest.mark.parametrize("details,expected", [
+    ("subject ann@x.com", True),
+    ("deletion completed", False),
+    ("subject bob@x.com", False),
+    ("subject ann@x.com user_2", False),
+    ("subject ann.old@x.com", True),
+    ("subject nobody@x.com", False),
+])
+def test_activity_candidate_requires_exclusive_exact_subject_identifier(details, expected):
+    deletion = Activity("activity_7", t(11), "DELETE_RECORD", "deletion_worker",
+                        "account_service", "account_9", "SUCCESS", details)
+    result = case(build([obs("evidence_1", "search_1", t(14))], activities=[deletion]))
+    assert result.activity_candidates[0].subject_linked is expected
+
+
+def test_multiple_deletion_events_are_not_unique_and_order_deterministically():
+    events = [
+        Activity("activity_9", t(11), "DELETE_RECORD", "deletion_worker", "account_service",
+                 "account_9", "SUCCESS", "subject ann@x.com"),
+        Activity("activity_8", t(11), "DELETE_RECORD", "deletion_worker", "account_service",
+                 "account_8", "SUCCESS", "subject ann@x.com"),
+    ]
+    result = case(build([obs("evidence_1", "search_1", t(14))], activities=events))
+    assert [a.activity_id for a in result.activity_candidates] == ["activity_8", "activity_9"]
+    assert not any(a.unique_in_window for a in result.activity_candidates)
 
 
 # --- state and absence ----------------------------------------------------------------------------
